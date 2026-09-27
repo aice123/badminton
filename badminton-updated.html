@@ -906,6 +906,7 @@
     if (it.swing && p.swingT <= 0 && p.cooldown <= 0) {
       /* AI 自己知道还有多久触球，用它作为预测跨度；玩家固定按 0.14s 估 */
       p.swingStyle = it.swingStyle || pickSwingStyle(w, p.swingHorizon || 0.14);
+      p.swingHit = false;      // 新的一挥：还没打过
       p.swingT = K.SWING_DUR;
       /* 挡网（接杀）的收拍更快：第一下时机不对还能马上补第二下。
        * 这是接杀能力的另一个直接来源 —— 之前一次挥空要等 0.4 秒，杀球早落地了。 */
@@ -934,7 +935,7 @@
       var onOwnSide = p.side === 'p'
         ? b.x <= K.NET_X + K.NET_REACH
         : b.x >= K.NET_X - K.NET_REACH;
-      if (onOwnSide && el >= wA && el <= wB &&
+      if (onOwnSide && el >= wA && el <= wB && !p.swingHit &&
           w.time - p.lastHitAt > 0.24 && w.lastHitter !== p.side) {
         var tip = racketTip(p), bc = bodyCenter(p);
         if (hypot(b.x - tip.x, b.y - tip.y) < K.TIP_R * rm ||
@@ -981,6 +982,7 @@
     w.lastHitKind = plan.kind;
     p.lastKind = plan.kind;     // 记住这一拍，用于下一步"反重复"
     p.lastHitAt = w.time;
+    p.swingHit = true;       // 这一挥已经打过了，回正时再碰到球不算
     p.hits++;
     p.wantDrop = false;
     w.lastHitter = p.side;
@@ -1597,6 +1599,9 @@
     ctx.font = 'bold 12px "Microsoft YaHei",system-ui,sans-serif';
     ctx.fillStyle = 'rgba(160,205,255,0.42)';
     ctx.fillText('Aice & DeepSeek', K.W - 18, 244);
+    // 横幅左端：项目地址（与右端署名对称）
+    ctx.textAlign = 'left';
+    ctx.fillText('https://github.com/aice123/badminton', 18, 244);
 
     // 后墙
     ctx.fillStyle = 'rgba(10,16,32,0.92)';
