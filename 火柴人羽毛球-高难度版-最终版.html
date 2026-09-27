@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>火柴人羽毛球 · 高难度版（单文件）</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% 0%, #1b2544 0%, #0a0e1a 65%);
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+    color: #e8f0ff;
+    user-select: none;
+  }
+  #app { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; border-radius: 10px; box-shadow: 0 24px 70px rgba(0, 0, 0, .6); }
+
+  .overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(6, 10, 22, .82); backdrop-filter: blur(6px); z-index: 20;
+  }
+  .overlay.hide { display: none; }
+  .panel {
+    width: min(560px, 92vw); background: linear-gradient(180deg, rgba(30, 41, 72, .96), rgba(16, 22, 40, .98));
+    border: 1px solid rgba(120, 170, 255, .25); border-radius: 18px; padding: 26px 28px 22px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .07);
+  }
+  h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: 2px; text-align: center;
+       background: linear-gradient(90deg, #7fe3ff, #b9a0ff 55%, #ffb37f);
+       -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { text-align: center; color: #8ea6cc; font-size: 13px; margin-bottom: 18px; }
+  .diffrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .moderow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .modepick {
+    padding: 12px 4px; border-radius: 12px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 700;
+    border: 1px solid rgba(130, 170, 235, .3); background: rgba(255, 255, 255, .04); color: #cbdcf7; transition: .15s;
+  }
+  .modepick:hover { background: rgba(255, 255, 255, .09); }
+  .modepick.sel { border-color: #7fe3ff; background: linear-gradient(180deg, rgba(70, 190, 255, .32), rgba(70, 150, 255, .12)); color: #fff;
+                  box-shadow: 0 0 0 1px rgba(127, 227, 255, .5), 0 6px 20px rgba(60, 160, 255, .25); }
+  #diffWrap.off { opacity: .35; pointer-events: none; }
+  .diffpick {
+    padding: 11px 4px; border-radius: 11px; text-align: center; cursor: pointer; font-size: 15px; font-weight: 700;
+    border: 1px solid rgba(130, 170, 235, .3); background: rgba(255, 255, 255, .04); color: #cbdcf7;
+    transition: .15s;
+  }
+  .diffpick:hover { background: rgba(255, 255, 255, .09); }
+  .diffpick.sel { border-color: #6cc6ff; background: linear-gradient(180deg, rgba(70, 150, 255, .35), rgba(70, 150, 255, .12)); color: #fff; box-shadow: 0 0 0 1px rgba(108, 198, 255, .5), 0 6px 20px rgba(60, 130, 255, .25); }
+  .diffpick[data-d="hell"].sel { border-color: #ff6b6b; background: linear-gradient(180deg, rgba(255, 90, 90, .35), rgba(255, 90, 90, .12)); box-shadow: 0 0 0 1px rgba(255, 107, 107, .5), 0 6px 20px rgba(255, 70, 70, .25); }
+  #diffNote { min-height: 38px; font-size: 13px; line-height: 1.6; color: #9fb6d9; background: rgba(0, 0, 0, .22);
+              border-left: 3px solid rgba(110, 190, 255, .6); border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; color: #a9bede; margin-bottom: 18px; }
+  .keys b { color: #e9f2ff; background: rgba(255, 255, 255, .09); border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 6px; padding: 2px 8px; font-weight: 600; text-align: center; }
+  button.primary {
+    width: 100%; padding: 14px; font-size: 18px; font-weight: 800; letter-spacing: 3px; cursor: pointer;
+    color: #051022; border: 0; border-radius: 12px;
+    background: linear-gradient(180deg, #8fe0ff, #4aa8ff); box-shadow: 0 10px 26px rgba(74, 168, 255, .35);
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.ghost {
+    width: 100%; padding: 11px; margin-top: 10px; font-size: 15px; cursor: pointer; color: #cfdcf2;
+    background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px;
+  }
+  button.ghost:hover { background: rgba(255, 255, 255, .13); }
+  #overTitle { font-size: 34px; font-weight: 900; text-align: center; letter-spacing: 6px; margin-bottom: 6px; }
+  #overScore { text-align: center; font-size: 40px; font-weight: 900; color: #fff; letter-spacing: 4px; }
+  #overInfo { text-align: center; font-size: 13px; color: #9fb6d9; margin: 10px 0 18px; }
+  #overInfo b { color: #d8e6ff; }
+
+  #touch { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+  #touch.hide { display: none; }
+  .tbtn {
+    position: absolute; bottom: 16px; width: 62px; height: 62px; border-radius: 50%;
+    background: rgba(255, 255, 255, .10); border: 1px solid rgba(255, 255, 255, .25);
+    color: #dce9ff; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; backdrop-filter: blur(3px);
+  }
+  .tbtn.on { background: rgba(110, 190, 255, .45); }
+  .tbtn[data-k="left"]  { left: 16px; }
+  .tbtn[data-k="right"] { left: 92px; }
+  .tbtn[data-k="jump"]  { right: 176px; }
+  .tbtn[data-k="swing"] { right: 96px; width: 74px; height: 74px; font-size: 15px; }
+  .tbtn[data-k="drop"]  { right: 16px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="game" width="1000" height="560"></canvas>
+
+    <div id="touch" class="hide">
+      <div class="tbtn" data-k="left">◀</div>
+      <div class="tbtn" data-k="right">▶</div>
+      <div class="tbtn" data-k="jump">跳</div>
+      <div class="tbtn" data-k="swing">挥拍</div>
+      <div class="tbtn" data-k="drop">吊</div>
+    </div>
+
+    <div id="menu" class="overlay">
+      <div class="panel">
+        <h1>火柴人羽毛球</h1>
+        <div class="sub">高难度版 v2.0 · 单人（人机）/ 双人（同屏）· 三局两胜 每局 15 分</div>
+        <div class="moderow">
+          <div class="modepick sel" data-m="1p">单人 · 人机</div>
+          <div class="modepick" data-m="2p">双人 · 同屏</div>
+          <div class="modepick" data-m="ai">观战 · 互打</div>
+        </div>
+        <div id="diffWrap">
+          <div class="diffrow">
+          <div class="diffpick" data-d="easy">简单</div>
+          <div class="diffpick" data-d="normal">普通</div>
+          <div class="diffpick sel" data-d="hard">困难</div>
+          <div class="diffpick" data-d="hell">地狱</div>
+          </div>
+        <input type="radio" name="diff" value="easy" hidden>
+        <input type="radio" name="diff" value="normal" hidden>
+        <input type="radio" name="diff" value="hard" checked hidden>
+        <input type="radio" name="diff" value="hell" hidden>
+        <div id="diffNote"></div>
+        </div>
+        <div class="keys">
+          <b>A / D</b><span>左右移动（也可用 ← →）</span>
+          <b>W / ↑</b><span>起跳——跳起来接球可以更早扣杀</span>
+          <b>空格 / J</b><span>挥拍、发球（高点球会自动扣杀）</span>
+          <b>S / ↓ / L</b><span><b>直接</b>挥拍吊球，不用再按空格；发球时按它 = 发短球</span>
+          <b>Shift / K</b><span><b>直接</b>挥拍打高远球（不扣杀），把对手压回后场</span>
+          <b>双人模式</b><span>右侧玩家用小键盘：<b>4 / 6</b> 移动，<b>8</b> 起跳，<b>0</b> 挥拍，<b>5</b> 吊球，<b>Enter（回车）</b> 高远球；没有小键盘就用 ← → ↑ + 回车</span>
+          <b>H / M / P</b><span>落点提示 / 音效 / 暂停</span>
+        </div>
+        <button class="primary" id="btnStart">开 始 比 赛</button>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hide">
+      <div class="panel">
+        <h1 style="font-size:24px">已 暂 停</h1>
+        <div class="sub">按 P 或 Esc 亦可继续</div>
+        <button class="primary" id="btnResume">继 续 比 赛</button>
+        <button class="ghost" id="btnQuit">返回主菜单</button>
+      </div>
+    </div>
+
+    <div id="over" class="overlay hide">
+      <div class="panel">
+        <div id="overTitle">你 赢 了 ！</div>
+        <div id="overScore">11 : 0</div>
+        <div id="overInfo"></div>
+        <button class="primary" id="btnRestart">再 来 一 局</button>
+        <button class="ghost" id="btnMenu">返回主菜单</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 火柴人羽毛球 · 高难度版 —— 纯逻辑核心
+ * 不依赖 DOM，可在 Node 中直接跑无头对战测试。
+ */
+(function (global) {
+  'use strict';
+
+  // ---------------------------------------------------------------- 常量
+  var K = {
+    W: 1000, H: 560,
+    GROUND: 472,          // 地面 y
+    NET_X: 500,           // 球网 x
+    NET_TOP: 362,         // 网顶 y
+    LEFT_BASE: 64,
+    RIGHT_BASE: 936,
+    /* 物理按真实比例标定：场地 13.4m ↔ 872px，即 1m ≈ 65px
+     *   g   = 9.8 m/s² → 637 px/s²
+     *   v_t = 6.7 m/s  → 436 px/s（羽毛球终端速度）
+     * 于是 v_t²/g ≈ 299px ≈ 4.6m，和真实羽毛球的特征长度一致，
+     * 弧线形状、滞空时间就跟真人打球一样（高远球能飞到 6m 高、滞空约 2 秒）。 */
+    G: 1600,
+    /* 高远球专用重力：调大 = 从最高点往下掉得又快又猛（下坠感的关键）。
+     * 之前只调弧高和阻力，球是"飘下来"的，所以有角度却没有下坠感。 */
+    G_CLEAR: 2200,
+    PG: 1800,             // 火柴人自己的重力（人不需要真实比例，手感要利落）
+    /* 二次空气阻力：调大 = 水平速度衰减更快 = 末段更垂直地掉下来（代价是射程变短）。
+     * 0.0042 是实测平衡点：高远球仍能飞到中场偏后，下落角从 79° 提升到 84°。 */
+    /* 阻力：在"能让高远球压到底线"和"末段垂直下坠"之间的平衡点 */
+    DRAG: 0.00300,
+    FIXED: 1 / 120,
+    PLAYER_SPEED: 400,
+    MOVE_ACCEL: 4600,
+    JUMP_V: 760,
+    SWING_DUR: 0.30,
+    TIP_R: 50,
+    BODY_R: 86,
+    HIP_H: 60,
+    TORSO: 46,
+    ARM: 46,
+    RACKET: 44,
+    SHOT_MIN: 150,
+    SHOT_MAX: 9500,
+    SMASH_MAX: 4000,      // 扣杀单独限速：约 61.5 m/s ≈ 221 km/h
+    SMASH_KMH_MIN: 230,   // 扣杀出球速度随机区间（km/h）
+    SMASH_KMH_MAX: 565,
+    WIN_SCORE: 15,        // 每局 15 分
+    WIN_CAP: 21,          // 20 平后一分定胜负（封顶 21）
+    BEST_OF: 3,           // 三局两胜
+    GAME_BREAK: 2.8,      // 局间休息时长
+    POINT_PAUSE: 1.25,
+    SERVE_DELAY: 0.5,
+    /* 回合超时只是"球卡住"的安全网。现在平均回合 15 拍左右，
+     * 22 秒会被正常的长回合撞到（之前会误判成"下网"），所以放得很宽。 */
+    RALLY_TIMEOUT: 60
+  };
+
+  /* 发球区（单打）：前发球线距网 1.98m ≈ 129px，端线距网 436px。
+   * 发球落点必须落在这个区间里，否则判发球违例。 */
+  K.SHORT_SERVICE = 129;
+  K.SERVE_LINE_P = 500 - 129;   // 我方发球线 x=371
+  K.SERVE_LINE_A = 500 + 129;   // 对方发球线 x=629
+  K.LONG_SERVICE = 436;
+  /* 击球点必须在自己的半场：球心越过网平面就不许打（禁止过网击球）。
+   * 允许 NET_REACH 像素的宽容度，给"球贴着网带"的判定留余量。 */
+  K.NET_REACH = 6;
+
+  /* 羽毛球不是质点：球头 + 羽裙整体大约这么宽。网、地面都按这个半径判定，
+   * 避免"画面上已经蹭到网、判定却说没碰到"的情况。 */
+  K.NET_R = 10;
+  K.GROUND_R = 4;
+  /* 出界墙：球飞出这个范围就判死球。预测和真实模拟必须用同一组值，
+   * 否则 AI 眼里的落点和实际落点会差一截（之前一个用 ±80、一个用 ±40）。 */
+  K.WALL_L = -40;
+  K.WALL_R = 1040;
+
+  /* 人机手感辅助：键盘玩家不可能像程序那样精确，所以窗口和判定都给一点宽限 */
+  var HUMAN = { reachMul: 1.12, aimErr: 48 };
+
+  /* 弧线高度上限（像素，相对地面）—— 按球种分开，因为两种球的需求相反：
+   *   APEX_CAP  高远球/平抽/吊球：要快，压高度 → 约 3.7m，滞空 1.4 秒
+   *   LIFT_APEX 挑球（低位防守）：就是要又高又慢，用来买回位时间 → 约 6.5m，滞空 2 秒
+   */
+  var APEX_CAP = 165;
+  var LIFT_APEX = 255;
+  /* 高远球弧高：放开到远超画面高度（画面约 472px）。
+   * 球会飞出屏幕顶部再落回来 —— 这样才是真正的"高远球"，
+   * 而且从更高处下落，末段自然更陡。落地提示圈会告诉你它落哪。 */
+  var CLEAR_APEX = 462;   // 高远球专属弧高（约 6.5m）
+  /* 防守站位深度（距网的像素）：对手准备进攻时电脑站的位置。
+   * 太小会被打到后场，太大会够不着前场的杀球，需要实验取平衡点。 */
+  K.DEF_DEPTH = 236;
+  /* 防守启动时的移动速度倍率，以及挡网时的判定圈放大（相当于蹬地伸拍救球） */
+  K.DEF_SPEED = 1.32;
+  K.DEF_REACH = 1.18;
+
+  var DIFFS = {
+    /* serveShort = 电脑发球时选择"低平短球"的概率（短球对手只能下手接，杀不了） */
+    /* pace = 出球弧线高度系数（1=正常高弧线，越小越平越快）。
+     * 只影响电脑自己的出球选择，不改任何规则。 */
+    easy:   { key: 'easy',   name: '简单', speed: 285, react: 0.30, errX: 72,  aimErr: 105, smash: 0.15, power: 0.72, serveShort: 0.40, pace: 1.00, mix: 0.30, jitter: 80 },
+    normal: { key: 'normal', name: '普通', speed: 362, react: 0.17, errX: 39,  aimErr: 52,  smash: 0.47, power: 0.90, serveShort: 0.62, pace: 0.92, mix: 0.28, jitter: 60 },
+    hard:   { key: 'hard',   name: '困难', speed: 392, react: 0.14, errX: 40,  aimErr: 50,  smash: 0.52, power: 0.90, serveShort: 0.68, pace: 0.80, mix: 0.34, jitter: 70 },
+    /* 地狱：不再靠"飙移速"堆难度 —— 移速拉到 640 时火柴人的跑动动画会明显变形。
+     * 难度的来源改成"判断更快、站位更准、接杀更强"，而不是"瞬移"。 */
+    /* 地狱：只调"能力属性"，规则一律不变（物理/网/发球区/出界/过网击球/判定窗口/得分方式）。
+     * 反应 0 = 每帧都重新判断；站位与瞄准误差归零 = 永远站对位置、永远打到最难受的点；
+     * 移速 700（玩家的 1.75 倍）；力量上限 ×1.30。 */
+    hell:   { key: 'hell',   name: '地狱', speed: 500, react: 0,    errX: 0,   aimErr: 0,   smash: 1.00, power: 1.30, serveShort: 0.90, pace: 0.42, mix: 0.40, jitter: 85 }
+  };
+
+  // ---------------------------------------------------------------- 工具
+  var _seed = 12345;
+  function seed(n) { _seed = (n >>> 0) || 1; }
+  function rnd() { _seed = (_seed * 1664525 + 1013904223) >>> 0; return _seed / 4294967296; }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function hypot(x, y) { return Math.sqrt(x * x + y * y); }
+
+  // ---------------------------------------------------------------- 几何
+  function shGeom(p) {
+    var hipY = K.GROUND - p.y - K.HIP_H;
+    return { hipY: hipY, shY: hipY - K.TORSO, shX: p.x, headY: hipY - K.TORSO - 16, headR: 11 };
+  }
+  function bodyCenter(p) {
+    var g = shGeom(p);
+    return { x: p.x, y: g.shY + 14 };
+  }
+  function armAngle(p) {
+    if (p.swingT > 0) {
+      var el = K.SWING_DUR - p.swingT;
+      var k = clamp(el / K.SWING_DUR, 0, 1);
+      var st = p.swingStyle || 'high';
+
+      if (st === 'low') {
+        /* 下手球（低位挑球/接杀起球）：先向下引拍，再向前上方兜起来 */
+        if (k < 0.28) { var t1 = k / 0.28; return lerp(-1.15, 2.05, t1 * t1); }
+        var e1 = 1 - Math.pow(1 - (k - 0.28) / 0.72, 2.2);
+        return lerp(2.05, 0.10, e1);
+      }
+      if (st === 'block') {
+        /* 向下挥拍的接杀挡网：拍子从身前上方往下压着推出去，出球平而快 */
+        if (k < 0.20) { var t2 = k / 0.20; return lerp(-1.15, -1.85, t2); }
+        var e2 = 1 - Math.pow(1 - (k - 0.20) / 0.80, 1.8);
+        return lerp(-1.85, 0.65, e2);
+      }
+      /* 高手位（扣杀 / 高远球）：前 25% 引拍到身后，后 75% 向前上方挥出 */
+      if (k < 0.25) { var t3 = k / 0.25; return lerp(-1.15, -2.50, t3 * t3); }
+      var e3 = 1 - Math.pow(1 - (k - 0.25) / 0.75, 2.4);
+      return lerp(-2.50, -0.30, e3);
+    }
+    return -1.15 + Math.sin(p.anim * 1.7) * 0.05;   // 站姿：拍子举在身前上方
+  }
+  function racketTip(p) {
+    var g = shGeom(p);
+    var a = armAngle(p);
+    var dx = Math.cos(a) * p.facing, dy = Math.sin(a);
+    var L = K.ARM + K.RACKET;
+    return { x: g.shX + dx * L, y: g.shY + dy * L };
+  }
+
+  /* 挥拍结束后拍子停在哪里（渲染残影用） */
+  function swingStartAngle(style) {
+    return style === 'low' ? 2.05 : (style === 'block' ? -1.85 : -2.50);
+  }
+  /* 不同挥拍动作的"有效触球窗口"（按下拍键之后多少秒内算打到球）：
+   *   高手位需要引拍到身后再挥出，窗口靠后；
+   *   接杀挡网是"身前直接推"，窗口必须非常靠前 ——
+   *   否则 0.08 秒就到的杀球在物理上根本不可能被挡回来。 */
+  function swingWindow(p, assisted) {
+    var st = p.swingStyle || 'high';
+    var wnd = st === 'block' ? [0.02, 0.19] : (st === 'low' ? [0.05, 0.25] : [0.10, 0.24]);
+    if (assisted) wnd = [Math.max(0, wnd[0] - 0.04), wnd[1] + 0.06];
+    return wnd;
+  }
+  /* 按下挥拍时，按"预计触球点的高度"决定用哪种挥拍动作 */
+  function pickSwingStyle(w, tAhead) {
+    var b = w.ball;
+    var fast = hypot(b.vx, b.vy) > 1000;
+    var bb = { x: b.x, y: b.y, vx: b.vx, vy: b.vy };
+    var n = Math.max(1, Math.round(tAhead / K.FIXED));
+    for (var i = 0; i < n; i++) stepBall(bb, K.FIXED);
+    var h = K.GROUND - bb.y;
+    /* 杀球/平抽这种快速来球，不管多低都是"身前挡网"动作；
+     * 之前按 0.14 秒后的高度去选，快球那时已经贴地，于是错选了下手挑球，
+     * 动作对不上球，判定圈也就打不到。 */
+    if (fast && h < 150) return 'block';
+    if (h >= 148) return 'high';
+    if (h >= 84) return 'block';
+    return 'low';
+  }
+
+  // ---------------------------------------------------------------- 球的物理
+  function stepBall(b, dt) {
+    var sp = hypot(b.vx, b.vy);
+    var d = K.DRAG * sp;
+    b.vx -= b.vx * d * dt;
+    b.vy -= b.vy * d * dt;
+    b.vy += (b.g === undefined ? K.G : b.g) * dt;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+  }
+
+  /* 网碰撞检测：网是竖直平面 x = NET_X，网身从 NET_TOP 到地面。
+   * 用半径判定，并且把"球心正好落在网平面上"也算撞网（之前这里会直接穿网）。 */
+  function netHit(b, px, py) {
+    var dx = b.x - px;
+    var t;
+    if (Math.abs(dx) < 1e-6) {
+      if (Math.abs(px - K.NET_X) > K.NET_R) return null;
+      t = 0;
+    } else {
+      t = (K.NET_X - px) / dx;
+      if (t < -0.001 || t > 1.001) return null;
+      t = clamp(t, 0, 1);
+    }
+    var yAt = py + (b.y - py) * t;
+    if (yAt <= K.NET_TOP - K.NET_R) return null;   // 连网带上沿都没碰到
+    if (yAt >= K.GROUND) return null;
+    return { yAt: yAt, fromLeft: px < K.NET_X, t: t };
+  }
+
+  /* 预测飞行：返回采样点与落点信息（含网、地面、出界） */
+ function ballSim(x, y, vx, vy, maxT, every) {
+    every = every || 2;
+    var b = { x: x, y: y, vx: vx, vy: vy, g: arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : K.G };
+    var dt = K.FIXED;
+    var n = Math.ceil(maxT / dt);
+    var samples = [];
+    var res = { samples: samples, landX: null, landT: 0, netHit: false, netY: 0, crossedNet: false, apexH: 0 };
+    for (var i = 0; i < n; i++) {
+      var px = b.x, py = b.y;
+      stepBall(b, dt);
+      var nh = netHit(b, px, py);
+      if (nh) {
+        res.netHit = true; res.netY = nh.yAt; res.landX = K.NET_X; res.landT = (i + 1) * dt;
+        return res;
+      }
+      if ((px - K.NET_X) * (b.x - K.NET_X) < 0) res.crossedNet = true;
+      if (i % every === 0) samples.push({ x: b.x, y: b.y, t: (i + 1) * dt, vx: b.vx, vy: b.vy });
+      var hNow = K.GROUND - b.y;
+      if (hNow > res.apexH) res.apexH = hNow;
+      if (b.y >= K.GROUND - K.GROUND_R) { res.landX = b.x; res.landT = (i + 1) * dt; return res; }
+      if (b.x < K.WALL_L || b.x > K.WALL_R) { res.landX = b.x; res.landT = (i + 1) * dt; return res; }
+    }
+    return res;
+  }
+
+ function landingRel(cx, cy, vx, vy) {
+    var b = { x: cx, y: cy, vx: vx, vy: vy, g: arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : K.G };
+    var dt = K.FIXED;
+    for (var i = 0; i < 720; i++) {
+      stepBall(b, dt);
+      if (b.y >= K.GROUND - K.GROUND_R) return b.x - cx;
+    }
+    return b.x - cx;
+  }
+
+  /* 给定出球仰角，二分出能落到目标 x 的初速度 */
+  function solveShot(cx, cy, targetX, angleDeg, maxSpeed, grav) {
+    var cap = maxSpeed || K.SHOT_MAX;
+    var a = angleDeg * Math.PI / 180;
+    var toRight = targetX >= cx;
+    var sgnDir = toRight ? 1 : -1;
+    var ux = Math.cos(a) * sgnDir, uy = -Math.sin(a);
+    var want = Math.abs(targetX - cx);
+    if (want < 14) return { vx: ux * 170, vy: uy * 170, speed: 170 };
+    var lo = Math.min(K.SHOT_MIN, cap), hi = cap;
+    for (var i = 0; i < 24; i++) {
+      var m = (lo + hi) / 2;
+      var rel = landingRel(cx, cy, ux * m, uy * m, grav) * sgnDir;
+      if (rel < want) lo = m; else hi = m;
+    }
+    var s = (lo + hi) / 2;
+    return { vx: ux * s, vy: uy * s, speed: s };
+  }
+
+  // ---------------------------------------------------------------- 击球规划
+  /* 坐标约定
+   *   xOf(side, d)      : side 击出、落在“对方半场”深度 d 处的 x（d>0 表示过网 d 像素）
+   *   intoDepth(side,x) : x 相对 side 而言，打进对方半场的深度
+   *   ownDepth(side,x)  : x 位于 side 自己半场的深度（贴网=0，底线=436）
+   */
+  function xOf(side, d) { return side === 'p' ? K.NET_X + d : K.NET_X - d; }
+  function intoDepth(side, x) { return side === 'p' ? x - K.NET_X : K.NET_X - x; }
+  function ownDepth(side, x) { return -intoDepth(side, x); }
+
+  function planShot(w, p, contact, opts) {
+    var own = p.side, opp = own === 'p' ? 'a' : 'p';
+    var oppP = opp === 'p' ? w.p : w.a;
+    var h = K.GROUND - contact.y;
+    var oppD = ownDepth(opp, oppP.x);
+    var oppNearNet = oppD < 175;
+    var contactD = clamp(ownDepth(own, contact.x), 0, 436);
+    var kind = opts.kind;
+    var lowVaried = false;
+    if (!kind) {
+      /* 优先级：吊球 > 高远 > 自动扣杀。
+       * 之前"高远"排在吊球前面，一旦 Shift 状态卡住，按 S 就永远无效。 */
+      if (opts.drop) kind = 'drop';
+      // 玩家主动打高球：低位时是"挑球"（要高），高点时才是"高远球"
+      else if (opts.high) kind = h <= 92 ? 'lift' : 'clear';
+      else if (opts.smash && h > 138) kind = 'smash';
+      /* 网前球优先级最高：触球点靠近网（对手放了小球）时先按网前处理，
+       * 必须在"球高→高远"之前判，否则球稍高就又被挑起来了。 */
+      else if (opts.mix && ownDepth(own, contact.x) < 155 && h < 150) {
+        var netPool = ['drop', 'drive', 'lift', 'clear'];   // 四种等概率，别总是回放网
+        kind = netPool[Math.floor(rnd() * netPool.length) % netPool.length];
+        /* 不设 lowVaried：下面的"随机换球种"再叠一层随机，进一步降低规律性 */
+      }
+      else if (h > 130) kind = 'drive';
+      else if (h > 76) kind = 'clear';
+      /* 低位球：原来一律挑高球。挑球又高又慢、等于把进攻权让出去，
+       * 所以电脑有一半概率改成放网前小球或平推，减少挑球比例。 */
+      else if (opts.mix && h < 76) {
+        /* 低位球（典型是接杀挡网）：能用的手段本来就少，
+         * 这里直接等概率随机，且跳过下面的"随机换球种"（否则会被池子里
+         * 只有 drop 的那一步覆盖掉 → 接杀之后每次都放网，太规律）。 */
+        /* 接杀挡网后的选择：放网/平推为主，挑高球压到 20%。
+         * （把原本等概率的 clear 去掉——从接杀位挑高球等于直接把球送给对手再杀） */
+        var lowPool = ['drop', 'drop', 'drive', 'drive', 'lift'];
+        kind = lowPool[Math.floor(rnd() * lowPool.length) % lowPool.length];
+        lowVaried = true;
+      }
+      else kind = 'lift';
+      /* 随机性：按当前球高挑几种"合理但不同"的打法，让对手猜不到下一拍 */
+      if (opts.mix && !lowVaried && rnd() < opts.mix) {
+        var pool = [];
+        if (h > 120) pool.push('smash');
+        if (h > 85) { pool.push('drive'); pool.push('clear'); }
+        if (h > 45) pool.push('clear');
+        pool.push('drop'); pool.push('drop');
+        /* mix 池里不再放挑球：随机性不应该变成"又多挑又高" */
+        kind = pool[Math.floor(rnd() * pool.length) % pool.length];
+      }
+      /* 反重复 / 迷惑性：如果这一拍跟上一拍是同一种球路，大概率换一个打法。
+       * 否则电脑会"连着挑好几拍"，节奏完全可预测。 */
+      if (opts.antiRepeat && p.lastKind === kind && rnd() < 0.5) {
+        var alt = [];
+        if (h > 120) alt.push('smash');
+        if (h > 85) { alt.push('drive'); alt.push('clear'); }
+        if (h > 60) alt.push('clear');
+        alt.push('drop'); alt.push('lift');   // 低位时反重复的备选也要有多样性
+        var alt2 = [];
+        for (var ai2 = 0; ai2 < alt.length; ai2++) if (alt[ai2] !== kind) alt2.push(alt[ai2]);
+        if (alt2.length) kind = alt2[Math.floor(rnd() * alt2.length) % alt2.length];
+      }
+    }
+
+    var dT;
+    if (kind === 'smash')      dT = oppNearNet ? 392 : (120 + oppD * 0.35);
+    else if (kind === 'drop')  dT = 105 + rnd() * 55;
+    else if (kind === 'drive') dT = oppNearNet ? 385 : 265;
+    else                       dT = 426;   // 高远球/挑球：推到接近端线的极限（端线 436，留 10px 安全边）
+    if (opts.aimErr) dT += (rnd() * 2 - 1) * opts.aimErr;
+    if (opts.jitter) dT += (rnd() * 2 - 1) * opts.jitter;   // 落点抖动，更难预判
+    dT = clamp(dT, 82, 428);
+    var target = xOf(own, dT);
+
+    /* 角度顺序很关键：谁排前面谁被优先选中。
+     * 高远球/挑球要「最陡」，否则会被偷偷变成平抽（这就是上一版高远球打不出来的原因）；
+     * 平抽要「最平」；扣杀要「最陡」（先把最刁的角度试完）。 */
+    var angles = kind === 'smash' ? [-46, -42, -38, -34, -30, -26, -22, -18, -14, -10, -6, -2, 2]
+      /* 吊球：先试最平的（贴网轻放），过不了网就逐级变陡。
+       * 低球时球在网带以下，必须用很陡的角度才能把球"搓"过网——这也是之前
+       * 按 S 没反应的原因（所有角度都撞网 → 走了兜底逻辑变成高远球）。 */
+      : kind === 'drop'  ? [30, 26, 22, 18, 14, 34, 38, 42, 46, 50, 54, 58, 62]
+      : kind === 'drive' ? [3, 6, 9, 12, 15, 18, 22, 26, 30]
+      /* clear / lift：优先高弧线，但如果最高点被画面高度限住（或距离太远），
+       * 就逐级变平——越平越快，这是控制"比赛节奏"的关键旋钮。 */
+      : [62, 58, 54, 50, 46, 42, 38, 34, 30, 26, 22, 18, 14];
+
+    // 越靠后场，扣杀威力越弱（离开网口越远，下压角度越小）
+    var cap = opts.maxSpeed || K.SHOT_MAX;
+    if (kind === 'smash') cap *= 0.70 + 0.30 * (1 - contactD / 436);
+    if (kind === 'smash') cap = Math.min(cap, K.SMASH_MAX);
+
+    /* 扣杀速度：每次随机取 230~500 km/h，然后挑"用这个速度能落在目标点"的角度。
+     * 之前只是改速度上限，而求解器是按落点反解的，所以调上限几乎看不出差别。 */
+    if (kind === 'smash') {
+      var vRand = (K.SMASH_KMH_MIN + rnd() * (K.SMASH_KMH_MAX - K.SMASH_KMH_MIN)) * 65 / 3.6;
+      var dirS = target >= contact.x ? 1 : -1;
+      var best = null, bestErr = 1e9;
+      for (var si = 0; si < angles.length; si++) {
+        var rad = angles[si] * Math.PI / 180;
+        var vx = Math.cos(rad) * dirS * vRand, vy = -Math.sin(rad) * vRand;
+        var sm2 = ballSim(contact.x, contact.y, vx, vy, 4.2, 10);
+        if (sm2.netHit || sm2.landX === null) continue;
+        var l2 = intoDepth(own, sm2.landX);
+        if (l2 < 70 || l2 > 440) continue;
+        var err = Math.abs(sm2.landX - target);
+        if (err < bestErr) { bestErr = err; best = { vx: vx, vy: vy }; }
+      }
+      if (best) return { vx: best.vx, vy: best.vy, kind: 'smash', target: target };
+    }
+
+    /* 弧线高度上限：必须在 kind 算出来之后再取，否则拿到的是 undefined，
+     * 挑球会被错误地限制成高远球的低弧线（这就是"挑球不够高"的原因）。
+     * 另外，高点球的最高点不可能低于击球点本身，所以上限要跟着击球点抬高。 */
+    /* pace：电脑的出球弧线高度系数。压平弧线 = 同样落点下出球更快、滞空更短。
+     * 挑球（防守高球）不受影响，否则它就没法把球挑起来了。 */
+    var pace = opts.pace || 1;
+    var grav = (kind === 'clear') ? K.G_CLEAR : K.G;
+    var apexLimit = Math.max(
+      kind === 'clear' ? CLEAR_APEX : (kind === 'lift' ? LIFT_APEX : APEX_CAP * pace), h + 70);
+
+    for (var i = 0; i < angles.length; i++) {
+      var sol = solveShot(contact.x, contact.y, target, angles[i], cap, grav);
+      if (sol.speed <= Math.min(K.SHOT_MIN, cap) + 1) continue;
+      var sim = ballSim(contact.x, contact.y, sol.vx, sol.vy, 4.2, 10, grav);
+      if (sim.netHit || sim.landX === null) continue;
+      // 最高点别飞出画面上沿（球要看得见才好玩）
+      if (sim.apexH > apexLimit) continue;
+      var ld = intoDepth(own, sim.landX);
+      if (ld < 70 || ld > 440) continue;
+      return { vx: sol.vx, vy: sol.vy, kind: kind, target: target };
+    }
+    /* 兜底：从陡到平找第一个能过网又落在场内的解。
+     * 之前兜底直接甩一记 50° 高远球，导致「按 S 吊球」被偷偷改成高远球，看起来就是按键没用。 */
+    for (var a2 = 68; a2 >= 26; a2 -= 4) {
+      var f2 = solveShot(contact.x, contact.y, xOf(own, 300), a2, cap);
+      var s2 = ballSim(contact.x, contact.y, f2.vx, f2.vy, 4.2, 10);
+      if (s2.netHit || s2.landX === null || s2.apexH > apexLimit) continue;
+      var l2 = intoDepth(own, s2.landX);
+      if (l2 < 70 || l2 > 440) continue;
+      /* 兜底不再一律变成"挑高球"：按原本想打的球种记账，
+       * 否则接杀时想平推的球会全部被记成挑球（玩家看到的就是"挑球太多"）。 */
+      return { vx: f2.vx, vy: f2.vy, kind: kind === 'lift' ? 'lift' : 'clear', target: s2.landX };
+    }
+    /* 极端情况（角度都被画面高度限住）时的最后保险：放平一点，保证过网且落在场内，
+     * 而不是甩出一记飞出天际的高球。 */
+    for (var a3 = 44; a3 >= 6; a3 -= 4) {
+      var f3 = solveShot(contact.x, contact.y, xOf(own, 330), a3, cap);
+      var s3 = ballSim(contact.x, contact.y, f3.vx, f3.vy, 4.2, 10);
+      if (s3.netHit || s3.landX === null) continue;
+      var l3 = intoDepth(own, s3.landX);
+      if (l3 < 60 || l3 > 445) continue;
+      return { vx: f3.vx, vy: f3.vy, kind: 'drive', target: s3.landX };
+    }
+    var fb = solveShot(contact.x, contact.y, xOf(own, 300), 50, cap);
+    return { vx: fb.vx, vy: fb.vy, kind: 'clear', target: xOf(own, 300) };
+  }
+
+  // ---------------------------------------------------------------- 世界
+  function makePlayer(side, x, isAI) {
+    return {
+      side: side, x: x, y: 0, vx: 0, vy: 0,
+      facing: side === 'p' ? 1 : -1,
+      onGround: true, swingT: 0, cooldown: 0, anim: 0,
+      wantDrop: false, swingStyle: 'high', swingStart: -2.5,
+      wantHigh: false,
+      hits: 0, lastHitAt: -9, isAI: !!isAI,
+      intent: { left: 0, right: 0, jump: false, swing: false, drop: false, high: false },
+      ai: null
+    };
+  }
+
+  function createWorld(diffKey, mode) {
+    var d = DIFFS[diffKey] || DIFFS.hard;
+    var w = {
+      diff: d, diffKey: d.key,
+      p: makePlayer('p', 300, mode === 'ai'),
+      a: makePlayer('a', 700, mode !== '2p'),
+      mode: mode || '1p',
+      ball: { x: 0, y: 0, vx: 0, vy: 0, g: K.G, live: false, trail: [], dead: false },
+      state: 'serve', server: 'p', lastHitter: null,
+      score: { p: 0, a: 0 }, nextServer: 'p',
+      games: { p: 0, a: 0 }, gameNo: 1, gameScores: [], gameOver: false,
+      streak: { p: 0, a: 0 }, bestStreak: { p: 0, a: 0 },
+      gameMaxSpeed: { p: 0, a: 0 }, matchMaxSpeed: { p: 0, a: 0 },
+      hitLog: [],
+      msg: '', msgT: 0, time: 0, shake: 0, serveT: 0, pointT: 0, rallyT: 0,
+      rallyHits: 0, longestRally: 0, kills: { p: 0, a: 0 },
+      matchOver: false, winner: null, events: [], autoP: mode === 'ai'
+    };
+    w.skillP = null;   // 调试/观战用：给左侧玩家指定一套水平参数
+    initAI(w.p);
+    initAI(w.a);
+    resetServe(w, 'p');
+    return w;
+  }
+
+  /* 记录每一次击球的出球速度（最新在最后，只留最近 8 拍） */
+  function pushHitLog(w, side, spd) {
+    w.hitLog.push({ side: side, spd: spd });
+    while (w.hitLog.length > 8) w.hitLog.shift();
+  }
+
+  /* 把外部输入写进某个球员的 intent（人类玩家用） */
+  function applyInput(p, input) {
+    var it = p.intent;
+    input = input || {};
+    it.left = input.left ? 1 : 0;
+    it.right = input.right ? 1 : 0;
+    it.jump = !!input.jump;
+    it.drop = !!input.drop;
+    it.high = !!input.high;
+    /* S / ↓ / L 直接就是"吊球挥拍"，Shift / K 直接就是"高远球挥拍" */
+    it.swing = !!(input.swing || input.drop || input.high);
+  }
+
+  function initAI(p) {
+    p.ai = { reactUntil: 0, errX: 0, style: 'attack', serveAt: 0, homeD: 268 };
+  }
+
+  function resetServe(w, server) {
+    w.server = server;
+    w.state = 'serve';
+    w.serveT = 0;
+    w.rallyT = 0;
+    w.rallyHits = 0;
+    w.lastHitter = null;
+    w.ball.live = false;
+    w.ball.dead = false;
+    w.ball.g = K.G;
+    w.ball.trail.length = 0;
+    w.p.x = 300; w.p.y = 0; w.p.vx = 0; w.p.vy = 0; w.p.onGround = true;
+    w.p.swingT = 0; w.p.cooldown = 0;
+    w.a.x = 700; w.a.y = 0; w.a.vx = 0; w.a.vy = 0; w.a.onGround = true;
+    w.a.swingT = 0; w.a.cooldown = 0;
+    var rcv = server === 'p' ? w.a : w.p;
+    rcv.ai.reactUntil = 0;
+    rcv.ai.errX = 0;
+    rcv.ai.style = 'attack';
+    w.a.ai.serveAt = w.time + 0.85;
+    w.p.ai.serveAt = w.time + 0.85;
+    attachServeBall(w);
+  }
+
+  function attachServeBall(w) {
+    var s = w.server === 'p' ? w.p : w.a;
+    var sgn = w.server === 'p' ? 1 : -1;
+    var b = w.ball;
+    b.x = s.x + sgn * 34;
+    /* 发球前球是"拿在手上"的，必须完全跟着人走 —— 之前只跟随 30% 的跳跃高度，
+     * 人跳起来球却几乎留在原地。 */
+    b.y = K.GROUND - 118 - s.y;
+    b.vx = 0; b.vy = 0;
+    b.live = false;
+    b.dead = false;
+  }
+
+  function doServe(w, server) {
+    var s = server === 'p' ? w.p : w.a;
+    var other = server === 'p' ? w.a : w.p;
+    /* 从"球现在所在的位置"发出去：这样跳起来发球就是从高处发出（不会瞬移回地面） */
+    var contact = { x: w.ball.x, y: w.ball.y };
+    var short, dT;
+    if (server === 'p') {
+      short = !!w.p.intent.drop;                       // 按住 S 发短球
+      dT = short ? 152 : 352;
+    } else if (w.mode === '2p') {
+      short = !!w.a.intent.drop;                       // 双人模式：玩家2 自己选
+      dT = short ? 152 : 352;
+    } else {
+      /* 电脑以"低平短球"为主：贴网过去、落点在前发球线后一点，
+       * 这种球对手只能下手接，没法直接扣杀。偶尔偷袭后场。 */
+      var hd = ownDepth('p', w.p.x);
+      short = rnd() < (w.diff.serveShort === undefined ? 0.6 : w.diff.serveShort);
+      dT = short ? (142 + rnd() * 58) : clamp(330 + (hd - 260) * 0.5, 305, 418);
+    }
+    var target = xOf(server, dT);
+    /* 发球也要过 planner 的检查：低平球必须刚好越过网带，不能挂网 */
+    var angles = short ? [14, 17, 20, 24, 28, 32] : [48, 52, 56, 60, 44];
+    var sol = null;
+    for (var i = 0; i < angles.length; i++) {
+      var t = solveShot(contact.x, contact.y, target, angles[i], K.SHOT_MAX);
+      var sm = ballSim(contact.x, contact.y, t.vx, t.vy, 4.2, 6);
+      if (sm.netHit || sm.landX === null) continue;
+      var ld = intoDepth(server, sm.landX);
+      if (ld < K.SHORT_SERVICE + 8 || ld > K.LONG_SERVICE - 6) continue;
+      sol = t; break;
+    }
+    if (!sol) sol = solveShot(contact.x, contact.y, xOf(server, 330), 48, K.SHOT_MAX);
+    var b = w.ball;
+    b.x = contact.x; b.y = contact.y;
+    b.vx = sol.vx; b.vy = sol.vy;
+    b.live = true; b.dead = false; b.trail.length = 0;
+    b.g = K.G;   // 发球一律用普通重力（否则会继承上一拍高远球的重力 → 落点算错 → 疯狂违例）
+    /* 发球这一下也要计入速度统计（之前漏了） */
+    if (sol.speed > w.gameMaxSpeed[server]) w.gameMaxSpeed[server] = sol.speed;
+    if (sol.speed > w.matchMaxSpeed[server]) w.matchMaxSpeed[server] = sol.speed;
+    pushHitLog(w, server, sol.speed);
+    w.state = 'rally';
+    w.lastHitter = server;
+    w.lastHitKind = 'serve';
+    w.serveType = short ? 'short' : 'long';
+    /* 发完短球必须跟着上前封网，发高球才退到中场等杀 —— 之前电脑一律回中场，
+     * 所以发短球反而被对手放网前打死。 */
+    if (server === 'a') s.ai.homeD = short ? 186 : 288;
+    w.lastHitKind = 'serve';
+    w.rallyHits = 1;
+    w.rallyT = 0;
+    s.lastHitAt = w.time;
+    w.events.push({
+      type: 'hit', kind: 'serve', x: b.x, y: b.y, power: sol.speed,
+      side: server, serveType: short ? 'short' : 'long'
+    });
+    onIncoming(w, server);
+  }
+
+  /* 对手击球后：重置 AI 的反应延迟 / 判断误差 / 本回合风格 */
+  function onIncoming(w, hitter, kind) {
+    var rcv = hitter === 'p' ? w.a : w.p;
+    var d = (rcv.side === 'p' && w.skillP) ? w.skillP : w.diff;
+    /* 对杀球有预判：反应时间打折，站位误差也变小（真实选手会提前猜方向） */
+    /* 对杀球的预判：反应时间打折（真实选手看到对方起跳就知道要杀球了） */
+    var antic = kind === 'smash' ? 0.45 : 1;
+    rcv.ai.reactUntil = w.time + d.react * antic;
+    rcv.ai.errX = (rnd() * 2 - 1) * d.errX * (kind === 'smash' ? 0.35 : 1);
+    rcv.ai.style = rnd() < d.smash ? 'attack' : 'control';
+  }
+
+  // ---------------------------------------------------------------- 玩家
+  function stepPlayer(w, p, dt) {
+    var it = p.intent;
+    var sgn = p.side === 'p' ? 1 : -1;
+    var maxS = p.isAI ? (w.diff.speed) : K.PLAYER_SPEED;
+    var dir = (it.right ? 1 : 0) - (it.left ? 1 : 0);
+    if (p.swingT > 0 && !p.isAI) dir = dir * 0.35;   // 挥拍时略减速
+    var target = dir * maxS;
+    var acc = K.MOVE_ACCEL * dt;
+    if (p.vx < target) p.vx = Math.min(target, p.vx + acc);
+    else p.vx = Math.max(target, p.vx - acc);
+    p.x += p.vx * dt;
+    var minX = p.side === 'p' ? K.LEFT_BASE - 12 : K.NET_X + 18;
+    var maxX = p.side === 'p' ? K.NET_X - 18 : K.RIGHT_BASE + 12;
+    /* 发球时服务器必须站在发球线之后（一道空气墙，越不过去） */
+    if (w.state === 'serve' && w.server === p.side) {
+      if (p.side === 'p') maxX = K.SERVE_LINE_P;
+      else minX = K.SERVE_LINE_A;
+    }
+    p.x = clamp(p.x, minX, maxX);
+
+    if (it.jump && p.onGround) { p.vy = K.JUMP_V; p.onGround = false; }
+    if (!p.onGround) {
+      p.vy -= K.PG * dt;
+      p.y += p.vy * dt;
+      if (p.y <= 0) { p.y = 0; p.vy = 0; p.onGround = true; }
+    }
+
+    /* 跑动动画的播放速率封顶：移速再快，腿也不能转成风火轮（否则动作就"变形"了） */
+    var animRate = Math.min(0.6 + Math.abs(p.vx) * 0.012, 3.2);
+    p.anim += animRate * dt * (p.onGround ? 1 : 0.3);
+    if (p.cooldown > 0) p.cooldown -= dt;
+    if (p.swingT > 0) p.swingT -= dt;
+
+    if (it.swing && p.swingT <= 0 && p.cooldown <= 0) {
+      /* AI 自己知道还有多久触球，用它作为预测跨度；玩家固定按 0.14s 估 */
+      p.swingStyle = pickSwingStyle(w, p.swingHorizon || 0.14);
+      p.swingT = K.SWING_DUR;
+      /* 挡网（接杀）的收拍更快：第一下时机不对还能马上补第二下。
+       * 这是接杀能力的另一个直接来源 —— 之前一次挥空要等 0.4 秒，杀球早落地了。 */
+      p.cooldown = K.SWING_DUR + 0.10;
+      p.wantDrop = !!it.drop;
+      p.wantHigh = !!it.high;
+      p.swingStart = swingStartAngle(p.swingStyle);
+      w.events.push({
+        type: 'swing', side: p.side, style: p.swingStyle, h: K.GROUND - w.ball.y,
+        dx: Math.abs(w.ball.x - p.x), ballLive: !!w.ball.live
+      });
+    }
+
+    // 击中判定
+    var b = w.ball;
+    if (b.live && p.swingT > 0) {
+      var el = K.SWING_DUR - p.swingT;
+      // 手感辅助只给真正的键盘玩家（autoP 的测试机器人不享受）
+      var assisted = !p.isAI && !w.autoP;
+      var wnd = swingWindow(p, assisted);
+      var wA = wnd[0], wB = wnd[1];
+      /* 挡网（低位防守）时判定圈放大：相当于伸手伸拍去够 */
+      if ((p.swingStyle || 'high') === 'block') rm *= K.DEF_REACH;
+      var rm = (assisted ? HUMAN.reachMul : 1) * (p.isAI ? (w.diff.reachMul || 1) : 1);
+      /* 过网击球判定：球心必须还在自己这一侧（不允许把拍子伸过网去打） */
+      var onOwnSide = p.side === 'p'
+        ? b.x <= K.NET_X + K.NET_REACH
+        : b.x >= K.NET_X - K.NET_REACH;
+      if (onOwnSide && el >= wA && el <= wB &&
+          w.time - p.lastHitAt > 0.24 && w.lastHitter !== p.side) {
+        var tip = racketTip(p), bc = bodyCenter(p);
+        if (hypot(b.x - tip.x, b.y - tip.y) < K.TIP_R * rm ||
+            hypot(b.x - bc.x, b.y - bc.y) < K.BODY_R * rm) {
+          doHit(w, p);
+        }
+      }
+    }
+  }
+
+  function doHit(w, p) {
+    var b = w.ball;
+    var h = K.GROUND - b.y;
+    /* 修饰键在"按下挥拍的那一刻"和"挥拍过程中任意时刻"都算数，
+     * 这样玩家先按空格再按 S、或者一直按着 S，都生效。 */
+    var drop = !!(p.wantDrop || p.intent.drop);
+    var forceHigh = !p.isAI && !!(p.wantHigh || p.intent.high);
+    var smash = false;
+    if (!drop && !forceHigh) {
+      if (h >= 158) smash = true;
+      else if (!p.onGround && h >= 116) smash = true;
+    }
+    var plan = planShot(w, p, { x: b.x, y: b.y },
+      {
+        smash: smash, drop: drop,
+        high: forceHigh,
+        aimErr: p.isAI ? w.diff.aimErr : HUMAN.aimErr,
+        maxSpeed: K.SHOT_MAX * (p.isAI ? w.diff.power : 1),
+        pace: p.isAI ? (w.diff.pace === undefined ? 1 : w.diff.pace) : 1,
+        mix: p.isAI ? (w.diff.mix || 0) : 0,
+        antiRepeat: !!p.isAI,
+        jitter: p.isAI ? (w.diff.jitter || 0) : 0
+      });
+    b.vx = plan.vx; b.vy = plan.vy;
+    b.g = (plan.kind === 'clear') ? K.G_CLEAR : K.G;
+    /* 局内 / 全场、分边记录最高出球速度 */
+    var spd = hypot(plan.vx, plan.vy);
+    if (spd > w.gameMaxSpeed[p.side]) w.gameMaxSpeed[p.side] = spd;
+    if (spd > w.matchMaxSpeed[p.side]) w.matchMaxSpeed[p.side] = spd;
+    pushHitLog(w, p.side, spd);
+    b.trail.length = 0;
+    w.lastHitKind = plan.kind;
+    p.lastKind = plan.kind;     // 记住这一拍，用于下一步"反重复"
+    p.lastHitAt = w.time;
+    p.hits++;
+    p.wantDrop = false;
+    w.lastHitter = p.side;
+    w.rallyHits++;
+    if (w.rallyHits > w.longestRally) w.longestRally = w.rallyHits;
+    if (plan.kind === 'smash') w.shake = Math.min(1, w.shake + 0.85);
+    else w.shake = Math.min(1, w.shake + 0.12);
+    w.events.push({
+      type: 'hit', kind: plan.kind, x: b.x, y: b.y,
+      power: hypot(plan.vx, plan.vy), side: p.side
+    });
+    onIncoming(w, p.side, plan.kind);
+  }
+
+  // ---------------------------------------------------------------- 球与计分
+  function stepBallGame(w, dt) {
+    var b = w.ball;
+    var px = b.x, py = b.y;
+    stepBall(b, dt);
+    var nh = netHit(b, px, py);
+    if (nh) {
+      // 挂网：贴着网带掉下来，速度大幅衰减
+      b.x = K.NET_X + (nh.fromLeft ? -K.NET_R : K.NET_R);
+      b.y = nh.yAt;
+      b.vx = (nh.fromLeft ? -1 : 1) * Math.abs(b.vx) * 0.25;
+      b.vy = Math.abs(b.vy) * 0.35 + 30;
+      b.trail.length = 0;
+      w.events.push({ type: 'net', x: b.x, y: b.y });
+      w.shake = Math.min(1, w.shake + 0.22);
+    }
+    b.trail.push({ x: b.x, y: b.y });
+    if (b.trail.length > 18) b.trail.shift();
+    if (b.y >= K.GROUND - K.GROUND_R) { b.y = K.GROUND - K.GROUND_R; resolveLanding(w, b.x); return; }
+    if (b.x < K.WALL_L || b.x > K.WALL_R) { resolveLanding(w, b.x); return; }
+    if (w.rallyT > K.RALLY_TIMEOUT) {
+      // 安全网：极端情况（球卡住）才走到这里，判给接球方重发
+      scorePoint(w, w.lastHitter === 'p' ? 'a' : 'p', '超时重发');
+    }
+  }
+
+  function resolveLanding(w, x) {
+    var b = w.ball;
+    b.vx = 0; b.vy = 0; b.live = false; b.dead = true;
+    var inRight = x > K.NET_X && x <= K.RIGHT_BASE;
+    var inLeft = x < K.NET_X && x >= K.LEFT_BASE;
+    var winner, reason;
+    /* 发球限制：落点必须在前发球线与端线之间，否则判发球违例（接发球方得分） */
+    if (w.lastHitKind === 'serve' && w.rallyHits <= 1) {
+      var sd = intoDepth(w.lastHitter === 'p' ? 'p' : 'a', x);
+      if (sd < K.SHORT_SERVICE || sd > K.LONG_SERVICE) {
+        scorePoint(w, w.lastHitter === 'p' ? 'a' : 'p', '发球违例');
+        return;
+      }
+    }
+    /* 先判"落点有没有出界"：只要落在场地之外就是出界（哪怕之前蹭过网）。
+     * 之前是"先看落在网哪一侧"，结果挂网后弹到后场外面也会显示"下网"。 */
+    var outOfCourt = x < K.LEFT_BASE || x > K.RIGHT_BASE;
+    if (w.lastHitter === 'p') {
+      if (inRight) { winner = 'p'; reason = '得分'; }
+      else { winner = 'a'; reason = outOfCourt ? '出界' : '下网'; }
+    } else if (w.lastHitter === 'a') {
+      if (inLeft) { winner = 'a'; reason = '得分'; }
+      else { winner = 'p'; reason = outOfCourt ? '出界' : '下网'; }
+    } else {
+      winner = 'p'; reason = '失误';
+    }
+    scorePoint(w, winner, reason);
+  }
+
+  function scorePoint(w, winner, reason) {
+    w.score[winner]++;
+    /* 连续得分：本局内连拿多少分（换局清零），并记录全场最高连得 */
+    var loser = winner === 'p' ? 'a' : 'p';
+    w.streak[winner]++;
+    w.streak[loser] = 0;
+    if (w.streak[winner] > w.bestStreak[winner]) w.bestStreak[winner] = w.streak[winner];
+    if (reason === '得分') w.kills[winner]++;
+    w.state = 'point';
+    w.pointT = K.POINT_PAUSE;
+    w.msg = reason;
+    w.msgT = K.POINT_PAUSE;
+    w.events.push({ type: 'point', winner: winner, reason: reason, kind: w.lastHitKind, rally: w.rallyHits });
+    var a = w.score.p, b = w.score.a;
+    var hi = Math.max(a, b);
+    var needGames = Math.ceil(K.BEST_OF / 2);
+    if ((hi >= K.WIN_SCORE && Math.abs(a - b) >= 2) || hi >= K.WIN_CAP) {
+      /* 一局结束 */
+      w.games[winner]++;
+      w.gameScores.push({ p: a, a: b, winner: winner });
+      w.gameOver = true;
+      w.nextServer = winner;
+      if (w.games[winner] >= needGames) {
+        w.matchOver = true;
+        w.winner = winner;
+      } else {
+        w.pointT = K.GAME_BREAK;
+        w.msg = '第 ' + w.gameNo + ' 局 ' + (winner === 'p' ? '你拿下' : '电脑拿下') +
+          '（' + a + ':' + b + '）';
+        w.msgT = K.GAME_BREAK;
+      }
+      w.events.push({ type: 'gameover', winner: winner, p: a, a: b, gameNo: w.gameNo });
+    } else {
+      w.gameOver = false;
+      w.nextServer = winner;
+    }
+    w.a.ai.reactUntil = 0;
+  }
+
+  /* 开下一局：清空本局比分，由上一局胜者发球 */
+  function nextGame(w) {
+    w.gameNo++;
+    w.score = { p: 0, a: 0 };
+    w.gameOver = false;
+    w.streak = { p: 0, a: 0 };      // 连得纪录按局重置，bestStreak 保留全场
+    w.gameMaxSpeed = { p: 0, a: 0 };
+    resetServe(w, w.nextServer);
+  }
+
+  // ---------------------------------------------------------------- 电脑选手
+  function moveToX(p, x, spd, it, dead) {
+    var d = x - p.x;
+    dead = dead || 6;
+    if (d > dead) it.right = 1;
+    else if (d < -dead) it.left = 1;
+  }
+
+  function aiBrain(w, p, dt) {
+    var it = p.intent;
+    it.left = 0; it.right = 0; it.jump = false; it.swing = false; it.drop = false;
+    var ai = p.ai;
+    var own = p.side, opp = own === 'p' ? 'a' : 'p';
+    var oppP = opp === 'p' ? w.p : w.a;
+    var d = (own === 'p' && w.skillP) ? w.skillP : w.diff;
+    var sgn = own === 'p' ? 1 : -1;
+    var spd = (own === 'p' && !p.isAI) ? K.PLAYER_SPEED : d.speed;
+    /* 防守启动：对手杀球/平抽过来时，电脑会"蹬地"加速移动（真实选手的防守步法）。
+     * 这是接杀能力最直接的一块短板 —— 之前无论球多快都用同一个速度。 */
+    var incomingFast = w.state === 'rally' && w.lastHitter === opp &&
+      hypot(w.ball.vx, w.ball.vy) > 1050;
+    if (incomingFast) spd *= K.DEF_SPEED;
+    var minX = own === 'p' ? K.LEFT_BASE - 4 : K.NET_X + 26;
+    var maxX = own === 'p' ? K.NET_X - 26 : K.RIGHT_BASE + 4;
+
+    if (w.state === 'serve') {
+      if (w.server === own) {
+        if (w.serveT >= 0.85 && w.time >= ai.serveAt) doServe(w, own);
+      } else {
+        var hd0 = ownDepth(opp, (opp === 'p' ? w.p : w.a).x);
+        moveToX(p, xOf(own, -clamp(300 - hd0 * 0.2, 180, 400)), spd, it);
+      }
+      return;
+    }
+    if (w.state === 'point' || w.state === 'over') {
+      moveToX(p, clamp(xOf(own, -300), minX, maxX), spd, it);
+      return;
+    }
+    if (w.state !== 'rally') return;
+
+    var b = w.ball;
+    var incoming = (w.lastHitter === opp) && ownDepth(own, b.x) > -30;
+    if (w.debug) {
+      w.aiDebug = w.aiDebug || {};
+      w.aiDebug[own] = { stage: incoming ? 'incoming' : 'return', ballX: Math.round(b.x), ballH: Math.round(K.GROUND - b.y) };
+    }
+    if (!incoming) {
+      // 对手还在处理球 —— 预判来球落点，提前移动到能覆盖的位置
+      var sim0 = ballSim(b.x, b.y, b.vx, b.vy, 3.8, 4, b.g);
+      var landD = (sim0.landX === null) ? null : ownDepth(own, sim0.landX);
+      if (landD !== null && landD > 60) {
+        /* 站到落点与中场之间。球越快（杀球/平抽）越要果断压上去，
+         * 慢慢吊过来的球才留调整余量 —— 这是"接杀能力"的关键。 */
+        var fast0 = hypot(b.vx, b.vy) > 1100;
+        var commit = fast0 ? 0.95 : 0.6;
+        var errW = fast0 ? 0.15 : 0.45;
+        var preD = clamp(lerp(290, clamp(landD, 90, 415), commit) + ai.errX * errW, 95, 415);
+        moveToX(p, clamp(xOf(own, -preD), minX, maxX), spd, it);
+        if (w.debug) {
+          var d3 = w.aiDebug[own];
+          d3.pre = { landD: Math.round(landD), preD: Math.round(preD), fast: fast0,
+            target: Math.round(clamp(xOf(own, -preD), minX, maxX)) };
+        }
+      } else {
+        /* 球在对手半场 —— 一律站"防守位"，比默认回中位更靠前。
+         * 这是接杀能力的关键：杀球和大角度的球多半落在中场偏前，
+         * 之前站在 288 深度（x≈788），对手杀到前场 x≈653 必然够不着。 */
+        var oppD2 = ownDepth(opp, oppP.x);
+        var defD = oppD2 < 170 ? 168 : K.DEF_DEPTH + clamp((oppD2 - 260) * -0.10, -18, 18);
+        moveToX(p, clamp(xOf(own, -defD), minX, maxX), spd, it);
+        if (w.debug) {
+          w.aiDebug[own].pre = { why: 'defence', d: Math.round(defD), oppD: Math.round(oppD2) };
+        }
+      }
+      return;
+    }
+
+    var sim = ballSim(b.x, b.y, b.vx, b.vy, 3.8, 2, b.g);
+    var pick = null, fallback = null;
+    for (var i = 0; i < sim.samples.length; i++) {
+      var s = sim.samples[i];
+      var sd = ownDepth(own, s.x);
+      if (sd < 34 || sd > 452) continue;
+      var hh = K.GROUND - s.y;
+      if (hh < 8 || hh > 205) continue;           // 拍子够得着的高度区间
+      var wantX = clamp(s.x - sgn * 26, minX, maxX);
+      var need = Math.abs(wantX - p.x) - 52;    // 52 ≈ 稳妥的击球半径，留出到位余量
+      if (need > spd * s.t + 12) continue;
+      if (!fallback) fallback = s;
+      if (hh >= 58) { pick = s; break; }          // 尽量在舒服的高度击球
+    }
+    if (w.debug) {
+      var dbg = w.aiDebug[own];
+      dbg.stage = 'search';
+      dbg.samples = sim.samples.length;
+      dbg.pick = pick ? { t: +pick.t.toFixed(3), x: Math.round(pick.x), h: Math.round(K.GROUND - pick.y), px: Math.round(p.x) } :
+        (fallback ? 'only-fallback' : null);
+    }
+    if (!pick) pick = fallback;
+    /* 一个可击球点都找不到（典型情况：对手杀球，球又低又快）——
+     * 这时候唯一正确的选择是冲向预判落点，而不是退回中场！ */
+    if (!pick) {
+      var landAim = sim.landX === null ? xOf(own, -260) : sim.landX;
+      moveToX(p, clamp(landAim, minX, maxX), spd, it, 6);
+      if (w.debug) {
+        var d4 = w.aiDebug[own];
+        d4.stage = 'chase';
+        d4.landX = sim.landX === null ? null : Math.round(sim.landX);
+        d4.px2 = Math.round(p.x);
+        d4.n = sim.samples.length;
+        var probe = [];
+        for (var q = 0; q < sim.samples.length; q += Math.max(1, Math.floor(sim.samples.length / 6))) {
+          var ss = sim.samples[q];
+          var sdd = Math.round(ownDepth(own, ss.x));
+          var hhh = Math.round(K.GROUND - ss.y);
+          var wxx = clamp(ss.x - sgn * 26, minX, maxX);
+          probe.push(sdd + '/' + hhh + '/' + Math.round(spd * ss.t) + '/' +
+            Math.round(Math.abs(wxx - p.x) - 52));
+        }
+        d4.probe = probe.join(' ');
+      }
+      return;
+    }
+
+    var aimX = clamp(pick.x - sgn * 26 + ai.errX, minX, maxX);
+    moveToX(p, aimX, spd, it, 8);
+
+    /* 反应期：身体可以提前移动，但先不挥拍（反应的是"判断"，不是"脚步"）。
+     * 之前反应期内整个人冻结，杀球飞过来时根本来不及。 */
+    if (w.time < ai.reactUntil) {
+      if (w.debug) { w.aiDebug[own].stage = 'reacting'; w.aiDebug[own].cd = +(ai.reactUntil - w.time).toFixed(2); }
+      return;
+    }
+
+    var tPick = pick.t;
+    var hPick = K.GROUND - pick.y;
+    // 让触球时刻落在挥拍的有效窗口（按下后 0.08~0.22s）里
+    var gapAllow = hPick > 120 ? 78 : (hPick > 60 ? 60 : 46);
+    var bc = bodyCenter(p), tip = racketTip(p);
+    var gapNow = Math.min(
+      hypot(b.x - bc.x, b.y - bc.y) - K.BODY_R,
+      hypot(b.x - tip.x, b.y - tip.y) - K.TIP_R
+    );
+    var canSwing = p.swingT <= 0 && p.cooldown <= 0;
+    // 球还在对方半场时不出手，免得白白挥空（也会被判过网击球）
+    var ballOnMySide = ownDepth(own, b.x) > -K.NET_REACH;
+    // 球已经进拍子范围 → 立刻打；否则等“按下去正好在有效窗口内触球”的时机
+    /* 用"预计触球点"判断球会不会正好落进拍子判定圈 */
+    var predGap = Math.min(
+      hypot(pick.x - bc.x, pick.y - bc.y) - K.BODY_R,
+      hypot(pick.x - tip.x, pick.y - tip.y) - K.TIP_R
+    );
+    var wnd = swingWindow(p, false);
+
+    /* 跳杀：来球够高、这回合又是进攻倾向时，提前起跳，在空中最高点扣杀。
+     * 起跳时机按"距离触球还有多久"来定：跳太早会在下落时才碰到球，
+     * 跳太晚还没离地就挥拍（那样只是普通扣杀）。 */
+    /* 跳杀的两个硬条件（之前只判"球够不够高"，所以会出现"没到位就起跳"的空跳）：
+     *   1) 水平方向已经基本站到位（否则跳在空中时球到不了拍子范围内）
+     *   2) 起跳后的拍子覆盖区间 [jy+6, jy+246] 仍然包含预计触球高度  */
+    var jumpT = tPick;
+    var jy = K.JUMP_V * jumpT - 0.5 * K.PG * jumpT * jumpT;
+    var jumpReady = Math.abs(p.x - pick.x) <= 88;
+    var jumpReach = hPick >= jy + 20 && hPick <= jy + 230;
+    if (p.onGround && ai.style === 'attack' && hPick >= 170 && tPick >= 0.15 && tPick <= 0.36 &&
+        jumpReady && jumpReach && p.swingT <= 0 && p.cooldown <= 0 && ballOnMySide) {
+      it.jump = true;
+      if (w.debug) w.aiDebug[own].jumpSmash = Math.round(tPick * 1000);
+    }
+
+    var fire = canSwing && ballOnMySide && (gapNow < -8 ||
+      (predGap < 5 && tPick <= wnd[1] + 0.02) ||
+      (tPick <= wnd[1] - 0.005 && tPick >= wnd[0] - 0.005 && Math.abs(p.x - pick.x) <= gapAllow));
+    if (w.debug) {
+      var d2 = w.aiDebug[own];
+      d2.tPick = +tPick.toFixed(3);
+      d2.hPick = Math.round(hPick);
+      d2.gapNow = Math.round(gapNow);
+      d2.onSide = ballOnMySide;
+      d2.canSwing = canSwing;
+      d2.fire = fire;
+      d2.px = Math.round(p.x);
+      d2.pickX = Math.round(pick.x);
+    }
+    if (fire) {
+      it.swing = true;
+      p.swingHorizon = clamp(tPick, 0.03, 0.25);
+      var drop = false;
+      if (ai.style === 'control') drop = (hPick < 150) ? (rnd() < 0.55) : (rnd() < 0.8);
+      else if (hPick < 92) drop = rnd() < 0.25;
+      it.drop = drop;
+    }
+  }
+
+  // ---------------------------------------------------------------- 主步进
+  function stepWorld(w, input, dt, input2) {
+    w.time += dt;
+    if (w.msgT > 0) w.msgT = Math.max(0, w.msgT - dt);
+    if (w.shake > 0) w.shake = Math.max(0, w.shake - dt * 2.2);
+    if (w.state === 'serve') w.serveT += dt;
+    if (w.state === 'rally') w.rallyT += dt;
+
+    var twoP = w.mode === '2p';
+    if (w.autoP) aiBrain(w, w.p, dt);
+    else applyInput(w.p, input);
+    if (twoP) applyInput(w.a, input2);
+    else aiBrain(w, w.a, dt);
+
+    if (w.state === 'serve' && w.serveT > K.SERVE_DELAY &&
+        w.server === 'p' && w.p.intent.swing) {
+      doServe(w, 'p');
+    } else if (twoP && w.state === 'serve' && w.serveT > K.SERVE_DELAY &&
+        w.server === 'a' && w.a.intent.swing) {
+      doServe(w, 'a');
+    }
+
+    stepPlayer(w, w.p, dt);
+    stepPlayer(w, w.a, dt);
+
+    if (w.state === 'rally') stepBallGame(w, dt);
+    else if (w.state === 'serve') attachServeBall(w);
+
+    if (w.state === 'point') {
+      w.pointT -= dt;
+      if (w.pointT <= 0) {
+        if (w.matchOver) w.state = 'over';
+        else if (w.gameOver) nextGame(w);
+        else resetServe(w, w.nextServer);
+      }
+    }
+  }
+
+  var api = {
+    K: K, DIFFS: DIFFS,
+    seed: seed, rnd: rnd, clamp: clamp,
+    createWorld: createWorld, stepWorld: stepWorld,
+    applyInput: applyInput,
+    nextGame: nextGame,
+    resetServe: resetServe, ballSim: ballSim, solveShot: solveShot,
+    planShot: planShot, armAngle: armAngle, racketTip: racketTip,
+    swingStartAngle: swingStartAngle, pickSwingStyle: pickSwingStyle,
+    bodyCenter: bodyCenter, shGeom: shGeom,
+    xOf: xOf, ownDepth: ownDepth, intoDepth: intoDepth,
+    netHit: netHit, stepBallGame: stepBallGame, stepBall: stepBall
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  global.BAD = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/* 火柴人羽毛球 · 高难度版 —— 渲染 / 输入 / 界面 */
+(function () {
+  'use strict';
+  var BAD = window.BAD, K = BAD.K;
+  var BUILD = 'v2.5';       // 地狱属性拉满（规则未动）
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var stage = document.getElementById('stage');
+
+  // ------------------------------------------------------------ 状态
+  var world = null;
+  var state = 'menu';          // menu | playing | paused | over
+  var diff = 'hard';
+  var mode = '1p';              // '1p' 人机 / '2p' 双人对战
+  var showHints = true;
+  var soundOn = true;
+  var acc = 0, lastTs = 0;
+  var particles = [], rings = [];
+  var input = { left: false, right: false, jump: false, swing: false, drop: false, high: false };
+  var input2 = { left: false, right: false, jump: false, swing: false, drop: false, high: false };
+
+  // 背景人群（固定随机，避免每帧抖动）
+  var seedv = 987654321;
+  function vr() { seedv = (seedv * 1103515245 + 12345) & 0x7fffffff; return seedv / 0x7fffffff; }
+  var crowd = [];
+  for (var row = 0; row < 3; row++) {
+    for (var i = 0; i < 46; i++) {
+      crowd.push({
+        x: 4 + i * 22 + vr() * 10, y: 128 + row * 26 + vr() * 8,
+        r: 6 + vr() * 4, hue: 200 + vr() * 140, a: 0.16 + vr() * 0.2
+      });
+    }
+  }
+
+  // ------------------------------------------------------------ 自适应
+  function resize() {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var availW = stage.clientWidth, availH = stage.clientHeight;
+    var scale = Math.min(availW / K.W, availH / K.H);
+    canvas.style.width = Math.round(K.W * scale) + 'px';
+    canvas.style.height = Math.round(K.H * scale) + 'px';
+    canvas.width = Math.round(K.W * scale * dpr);
+    canvas.height = Math.round(K.H * scale * dpr);
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  // ------------------------------------------------------------ 音效
+  var ac = null;
+  function audio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = false; } }
+    // 浏览器自动播放策略：上下文可能处于 suspended，必须显式恢复，否则全程静音
+    if (ac && ac.state === 'suspended' && ac.resume) { try { ac.resume(); } catch (e) {} }
+    return ac || null;
+  }
+  /* 首次点击/按键时解锁音频（浏览器要求用户手势） */
+  function unlockAudio() {
+    audio();
+    window.removeEventListener('pointerdown', unlockAudio);
+    window.removeEventListener('keydown', unlockAudio);
+    window.removeEventListener('touchstart', unlockAudio);
+  }
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
+  window.addEventListener('touchstart', unlockAudio);
+  function blip(freq, dur, type, vol, slide) {
+    if (!soundOn) return;
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, a.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), a.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.12, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(); o.stop(a.currentTime + dur + 0.02);
+  }
+  function noise(dur, vol) {
+    if (!soundOn) return;
+    var a = audio(); if (!a) return;
+    var len = Math.floor(a.sampleRate * dur);
+    var buf = a.createBuffer(1, len, a.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    var s = a.createBufferSource(); s.buffer = buf;
+    var g = a.createGain(); g.gain.value = vol || 0.14;
+    var f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200;
+    s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+  }
+
+  // ------------------------------------------------------------ 特效
+  function spawnHitFx(x, y, kind, power) {
+    var n = kind === 'smash' ? 22 : 10;
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * (kind === 'smash' ? 420 : 200);
+      particles.push({
+        x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40,
+        life: 0.35 + Math.random() * 0.35, max: 0.7,
+        c: kind === 'smash' ? '#ffd166' : '#bde8ff', r: 1.6 + Math.random() * 2.2
+      });
+    }
+    rings.push({ x: x, y: y, t: 0, dur: kind === 'smash' ? 0.45 : 0.3, max: kind === 'smash' ? 90 : 46, c: kind === 'smash' ? '#ffb347' : '#9fe0ff' });
+  }
+
+  // ------------------------------------------------------------ 事件
+  function handleEvents() {
+    for (var i = 0; i < world.events.length; i++) {
+      var e = world.events[i];
+      if (e.type === 'hit') {
+        spawnHitFx(e.x, e.y, e.kind, e.power);
+        /* 音量整体调大（原来 0.1~0.2 太轻，很多人以为没声音） */
+        if (e.kind === 'smash') { blip(170, 0.20, 'square', 0.30, 55); noise(0.14, 0.34); }
+        else if (e.kind === 'drop') { blip(540, 0.10, 'triangle', 0.22, 300); noise(0.06, 0.16); }
+        else blip(380, 0.10, 'triangle', 0.26, 210);
+        noise(0.06, 0.20);
+      } else if (e.type === 'net') {
+        blip(120, 0.20, 'sawtooth', 0.20, 70); noise(0.14, 0.18);
+      } else if (e.type === 'point') {
+        if (e.winner === 'p') { blip(660, 0.12, 'sine', 0.24); setTimeout(function () { blip(990, 0.18, 'sine', 0.22); }, 110); }
+        else { blip(300, 0.15, 'sine', 0.22); setTimeout(function () { blip(190, 0.22, 'sine', 0.20); }, 120); }
+      }
+    }
+    world.events.length = 0;
+  }
+
+  // ------------------------------------------------------------ 渲染：场地
+  function drawBackground() {
+    var g = ctx.createLinearGradient(0, 0, 0, K.GROUND);
+    g.addColorStop(0, '#101a33');
+    g.addColorStop(0.55, '#16203c');
+    g.addColorStop(1, '#1d2745');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, K.W, K.GROUND);
+
+    // 顶灯
+    for (var i = 0; i < 3; i++) {
+      var cx = 180 + i * 320, cw = 190;
+      var lg = ctx.createRadialGradient(cx, 10, 10, cx, 10, 300);
+      lg.addColorStop(0, 'rgba(180,220,255,0.30)');
+      lg.addColorStop(1, 'rgba(180,220,255,0)');
+      ctx.fillStyle = lg;
+      ctx.beginPath();
+      ctx.moveTo(cx - cw, 0); ctx.lineTo(cx + cw, 0); ctx.lineTo(cx + cw * 2.4, K.GROUND); ctx.lineTo(cx - cw * 2.4, K.GROUND);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(220,240,255,0.85)';
+      ctx.fillRect(cx - 26, 6, 52, 7);
+    }
+
+    // 观众
+    for (var c = 0; c < crowd.length; c++) {
+      var p = crowd[c];
+      ctx.fillStyle = 'hsla(' + p.hue + ',55%,62%,' + p.a + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(8,12,24,0.55)';
+    ctx.fillRect(0, 200, K.W, 26);
+
+    // 横幅
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(0, 226, K.W, 34);
+    ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(200,225,255,0.5)';
+    ctx.fillText('火 柴 人 羽 毛 球  ·  高 难 度 版', K.W / 2, 244);
+
+    // 后墙
+    ctx.fillStyle = 'rgba(10,16,32,0.92)';
+    ctx.fillRect(0, 260, K.W, K.GROUND - 260);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (var x = 0; x < K.W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 260); ctx.lineTo(x, K.GROUND); ctx.stroke(); }
+  }
+
+  function drawCourt() {
+    // 地板
+    var g = ctx.createLinearGradient(0, K.GROUND, 0, K.H);
+    g.addColorStop(0, '#2b3350');
+    g.addColorStop(0.25, '#232a44');
+    g.addColorStop(1, '#141827');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, K.GROUND, K.W, K.H - K.GROUND);
+
+    // 地板高光
+    ctx.fillStyle = 'rgba(150,190,255,0.10)';
+    ctx.fillRect(0, K.GROUND, K.W, 3);
+
+    // 场地线
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(K.LEFT_BASE, K.GROUND); ctx.lineTo(K.LEFT_BASE, K.H);
+    ctx.moveTo(K.RIGHT_BASE, K.GROUND); ctx.lineTo(K.RIGHT_BASE, K.H);
+    ctx.stroke();
+    // 前发球线
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(K.SERVE_LINE_P, K.GROUND + 8); ctx.lineTo(K.SERVE_LINE_P, K.H);
+    ctx.moveTo(K.SERVE_LINE_A, K.GROUND + 8); ctx.lineTo(K.SERVE_LINE_A, K.H);
+    ctx.moveTo(K.NET_X, K.GROUND + 6); ctx.lineTo(K.NET_X, K.H);
+    ctx.stroke();
+    // 中场地带
+    ctx.fillStyle = 'rgba(120,200,255,0.06)';
+    ctx.fillRect(K.LEFT_BASE, K.GROUND + 4, K.RIGHT_BASE - K.LEFT_BASE, K.H - K.GROUND - 4);
+
+    /* 发球时把"合法站位区"标出来（发球线之后到端线） */
+    if (world.state === 'serve') {
+      var srvP = world.server === 'p';
+      var x0 = srvP ? K.LEFT_BASE : K.SERVE_LINE_A;
+      var x1 = srvP ? K.SERVE_LINE_P : K.RIGHT_BASE;
+      ctx.fillStyle = 'rgba(120,240,180,0.18)';
+      ctx.fillRect(x0, K.GROUND + 2, Math.max(0, x1 - x0), 24);
+      ctx.fillStyle = 'rgba(150,255,200,0.8)';
+      ctx.font = '500 11px "Microsoft YaHei",system-ui,sans-serif';
+      ctx.fillText('合法发球站位区', (x0 + x1) / 2, K.GROUND + 16);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '500 12px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('你 的 半 场', (K.LEFT_BASE + K.NET_X) / 2, K.GROUND + 22);
+    ctx.fillText('电 脑 半 场', (K.NET_X + K.RIGHT_BASE) / 2, K.GROUND + 22);
+  }
+
+  function drawNet() {
+    /* 侧视投影：网面正对镜头是一条线，不是长方形 */
+    // 网柱（近侧的柱子，画得比网线粗一点）
+    ctx.fillStyle = '#c8d6ee';
+    ctx.fillRect(K.NET_X - 1.5, K.NET_TOP - 7, 4, K.GROUND - K.NET_TOP + 9);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(K.NET_X - 1.5, K.NET_TOP - 7, 1.5, K.GROUND - K.NET_TOP + 9);
+    // 地面上的柱子底座
+    ctx.fillStyle = 'rgba(200,215,240,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(K.NET_X + 0.5, K.GROUND + 1, 7, 2.4, 0, 0, 6.2832);
+    ctx.fill();
+    // 网身：一条带轻微发光的细线
+    ctx.strokeStyle = 'rgba(190,220,255,0.22)';
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(K.NET_X + 0.5, K.NET_TOP); ctx.lineTo(K.NET_X + 0.5, K.GROUND); ctx.stroke();
+    ctx.strokeStyle = 'rgba(235,245,255,0.9)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(K.NET_X + 0.5, K.NET_TOP); ctx.lineTo(K.NET_X + 0.5, K.GROUND); ctx.stroke();
+    // 网格的暗示：非常短的横向刻线
+    ctx.strokeStyle = 'rgba(220,235,255,0.34)';
+    ctx.lineWidth = 1;
+    for (var y = K.NET_TOP + 4; y < K.GROUND; y += 6) {
+      ctx.beginPath(); ctx.moveTo(K.NET_X - 2, y); ctx.lineTo(K.NET_X + 3, y); ctx.stroke();
+    }
+    // 网顶白带（侧视时就是一小段横条）
+    ctx.fillStyle = 'rgba(248,252,255,0.96)';
+    ctx.fillRect(K.NET_X - 3.5, K.NET_TOP - 3, 8, 5);
+  }
+
+  function drawShadow(x, rx, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#05070f';
+    ctx.beginPath();
+    ctx.ellipse(x, K.GROUND + 3, rx, rx * 0.28, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------ 渲染：火柴人
+  function drawStickman(p, main, dark) {
+    var g = BAD.shGeom(p);
+    var hipY = g.hipY, shY = g.shY, shX = p.x;
+    var lift = Math.min(0.75, p.y / 320);
+
+    drawShadow(p.x, 30 - 9 * lift, 0.30 * (1 - lift));
+
+    var moving = Math.abs(p.vx) > 24;
+    var ph = p.anim * 8.5;
+    var a1 = moving ? Math.sin(ph) * 0.62 : (p.onGround ? 0.22 : 0.55);
+    var a2 = moving ? -Math.sin(ph) * 0.62 : (p.onGround ? -0.22 : -0.3);
+    var legLen = K.HIP_H;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 腿
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(shX, hipY); ctx.lineTo(shX + Math.sin(a1) * legLen, hipY + Math.cos(a1) * legLen);
+    ctx.moveTo(shX, hipY); ctx.lineTo(shX + Math.sin(a2) * legLen, hipY + Math.cos(a2) * legLen);
+    ctx.stroke();
+
+    // 躯干
+    ctx.strokeStyle = main;
+    ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(shX, hipY); ctx.lineTo(shX, shY); ctx.stroke();
+
+    // 头
+    ctx.fillStyle = main;
+    ctx.beginPath(); ctx.arc(shX, g.headY, g.headR, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#0b1020';
+    ctx.beginPath(); ctx.arc(shX + p.facing * 4, g.headY - 1, 2.3, 0, 6.2832); ctx.fill();
+
+    // 非持拍手
+    var backA = moving ? -a1 * 0.9 : -0.7;
+    ctx.strokeStyle = main;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(shX, shY + 6);
+    ctx.lineTo(shX + p.facing * Math.cos(backA + 1.2) * 34, shY + 6 - Math.sin(backA + 1.2) * 34);
+    ctx.stroke();
+
+    // 持拍手 + 球拍
+    var ang = BAD.armAngle(p);
+    var dx = Math.cos(ang) * p.facing, dy = Math.sin(ang);
+    var hx = shX + dx * K.ARM, hy = shY + dy * K.ARM;
+    var shaft = K.RACKET * 0.55;
+    var rx = shX + dx * (K.ARM + shaft), ry = shY + dy * (K.ARM + shaft);
+
+    ctx.strokeStyle = main;
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(shX, shY + 4); ctx.lineTo(hx, hy); ctx.stroke();
+
+    /* 球拍：用"沿杆方向的椭圆"来画，长轴和拍杆一致。
+     * 之前用 translate+rotate 再镜像，导致左侧球员的拍面偏移方向反了，看着就是歪的。 */
+    var racketAng = Math.atan2(dy, dx);
+    ctx.save();
+    ctx.translate(rx, ry);
+    ctx.rotate(racketAng);
+    // 拍杆 + 握把
+    ctx.strokeStyle = '#dfe8f8';
+    ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.moveTo(-shaft - 1, 0); ctx.lineTo(1.5, 0); ctx.stroke();
+    ctx.strokeStyle = '#8fa4c4';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(-shaft - 1, 0); ctx.lineTo(-shaft + 10, 0); ctx.stroke();
+    // 拍面（长轴顺着杆，正好是羽毛球拍的样子）
+    var headR = K.RACKET * 0.45;
+    ctx.strokeStyle = '#f6faff';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath(); ctx.ellipse(headR + 2, 0, headR, headR * 0.82, 0, 0, 6.2832); ctx.stroke();
+    ctx.fillStyle = 'rgba(150,200,255,0.10)';
+    ctx.fill();
+    // 拍线
+    ctx.strokeStyle = 'rgba(255,255,255,0.34)';
+    ctx.lineWidth = 1;
+    var cxh = headR + 2;
+    for (var i = -2; i <= 2; i++) {
+      var off = i * headR * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(cxh + off, -headR * 0.7); ctx.lineTo(cxh + off, headR * 0.7);
+      ctx.stroke();
+    }
+    for (var j = -1; j <= 1; j++) {
+      var oy = j * headR * 0.5;
+      var hw = headR * Math.sqrt(Math.max(0.05, 1 - (oy / (headR * 0.82)) * (oy / (headR * 0.82))));
+      ctx.beginPath(); ctx.moveTo(cxh - hw, oy); ctx.lineTo(cxh + hw, oy); ctx.stroke();
+    }
+    ctx.restore();
+
+    // 挥拍残影：从引拍位置扫到当前角度（左右两侧都要画对方向）
+    if (p.swingT > 0) {
+      var mir = function (a) { return p.facing === 1 ? a : Math.PI - a; };
+      var a0 = mir(p.swingStart === undefined ? -2.5 : p.swingStart), a1 = mir(ang);
+      ctx.strokeStyle = p.swingStyle === 'block' ? 'rgba(180,230,255,0.34)' : 'rgba(255,255,255,0.28)';
+      ctx.lineWidth = p.swingStyle === 'block' ? 4.2 : 3.4;
+      ctx.beginPath();
+      ctx.arc(shX, shY, K.ARM + K.RACKET * 0.78, Math.min(a0, a1), Math.max(a0, a1), false);
+      ctx.stroke();
+    }
+  }
+
+  // ------------------------------------------------------------ 渲染：球
+  function drawShuttle() {
+    var b = world.ball;
+    // 拖尾
+    for (var i = 0; i < b.trail.length; i++) {
+      var t = b.trail[i], a = (i / b.trail.length) * 0.45;
+      ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(t.x, t.y, 1.5 + i * 0.13, 0, 6.2832); ctx.fill();
+    }
+    if (!b.live && !b.dead && world.state !== 'serve') return;
+
+    var ang = Math.atan2(b.vy, b.vx || 0.001);
+    var h = Math.max(0, K.GROUND - b.y);
+    drawShadow(b.x, 16 * Math.max(0.25, 1 - h / 420), Math.max(0.05, 0.3 - h / 1600));
+
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(ang);
+    // 羽毛裙
+    ctx.fillStyle = '#f6f9ff';
+    ctx.beginPath();
+    ctx.moveTo(-1, 0);
+    ctx.lineTo(-17, -7);
+    ctx.lineTo(-19, 0);
+    ctx.lineTo(-17, 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120,150,190,0.55)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(-17, -7); ctx.lineTo(-19, 0); ctx.lineTo(-17, 7); ctx.stroke();
+    // 球头
+    ctx.fillStyle = '#fffdf5';
+    ctx.beginPath(); ctx.arc(0, 0, 4.2, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#c9a227';
+    ctx.beginPath(); ctx.arc(1.4, 0, 2.1, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------ 渲染：提示
+  function drawLandingHint() {
+    if (!showHints || !world.ball.live) return;
+    var b = world.ball;
+    // 只预测对我方有威胁的球
+    var sim = BAD.ballSim(b.x, b.y, b.vx, b.vy, 4, 6);
+    if (sim.landX === null || sim.netHit) return;
+    var inCourt = sim.landX >= K.LEFT_BASE && sim.landX <= K.RIGHT_BASE;
+    var onMySide = sim.landX < K.NET_X;
+    var col = !inCourt ? 'rgba(255,90,90,' : (onMySide ? 'rgba(120,240,180,' : 'rgba(255,210,110,');
+    var pulse = 0.45 + 0.35 * Math.sin(world.time * 9);
+    ctx.save();
+    ctx.strokeStyle = col + pulse.toFixed(2) + ')';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(sim.landX, K.GROUND + 6, 22, 7, 0, 0, 6.2832);
+    ctx.stroke();
+    ctx.fillStyle = col + '0.12)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------ 渲染：HUD
+  /* 当前拍型预览：直接告诉玩家"现在挥拍会打出什么球" */
+  function previewShot(who) {
+    if (!world) return '';
+    var p = who === 2 ? world.a : world.p;
+    var inp = who === 2 ? input2 : input;
+    var b = world.ball;
+    if (inp.drop) return '吊球（放网前）';
+    if (inp.high) return '高远球';
+    if (!b.live) return '—';
+    var h = K.GROUND - b.y;
+    if (h >= 158 || (!p.onGround && h >= 116)) return '扣杀';
+    if (h > 130) return '平抽';
+    if (h > 76) return '高远球 / 挑球';
+    return '低位挑球';
+  }
+
+  /* 按键指示灯：让玩家看到按键是不是真的被游戏收到了 */
+  function chipsFor(who) {
+    var inp = who === 2 ? input2 : input;
+    return who === 2 ? [
+      { on: inp.left, label: '小键盘4 左' },
+      { on: inp.right, label: '6 右' },
+      { on: inp.jump, label: '8 跳' },
+      { on: inp.swing, label: '0 挥拍', hot: '#8fd6ff' },
+      { on: inp.drop, label: '5 吊球', hot: '#7ef0b8' },
+      { on: inp.high, label: 'Enter 高远', hot: '#ffd166' }
+    ] : [
+      { on: inp.left, label: '← A' },
+      { on: inp.right, label: '→ D' },
+      { on: inp.jump, label: '跳 W' },
+      { on: inp.swing, label: '挥拍 空格', hot: '#8fd6ff' },
+      { on: inp.drop, label: '直接吊球 S', hot: '#7ef0b8' },
+      { on: inp.high, label: '直接高远 Shift/K', hot: '#ffd166' }
+    ];
+  }
+
+  function drawChipRow(chips, x, y, preview) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 12px "Microsoft YaHei",system-ui,sans-serif';
+    for (var i = 0; i < chips.length; i++) {
+      var c = chips[i];
+      var w = ctx.measureText(c.label).width + 16;
+      if (c.on) {
+        ctx.fillStyle = c.hot || '#9fc6ff';
+        ctx.globalAlpha = 0.9;
+        roundRect(x, y - 11, w, 22, 6); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#06121f';
+      } else {
+        ctx.strokeStyle = 'rgba(150,180,220,0.35)';
+        ctx.lineWidth = 1;
+        roundRect(x, y - 11, w, 22, 6); ctx.stroke();
+        ctx.fillStyle = 'rgba(160,185,220,0.65)';
+      }
+      ctx.fillText(c.label, x + 8, y + 1);
+      x += w + 6;
+    }
+    ctx.fillStyle = 'rgba(190,215,245,0.8)';
+    ctx.font = '13px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillText('现在挥拍 → ' + preview, x + 8, y + 1);
+  }
+
+  function drawInputPanel() {
+    if (world.mode === '2p') {
+      drawChipRow(chipsFor(1), 20, 498, previewShot(1));
+      drawChipRow(chipsFor(2), 20, 520, previewShot(2));
+    } else {
+      drawChipRow(chipsFor(1), 20, 522, previewShot(1));
+    }
+  }
+
+  function drawHUD() {
+    var w = world;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // 比分板（第几局 / 局分 / 本局比分）
+    ctx.fillStyle = 'rgba(6,10,22,0.75)';
+    roundRect(K.W / 2 - 196, 10, 392, 78, 14); ctx.fill();
+    ctx.strokeStyle = 'rgba(140,180,255,0.25)'; ctx.lineWidth = 1.5;
+    roundRect(K.W / 2 - 196, 10, 392, 78, 14); ctx.stroke();
+
+    var d = BAD.DIFFS[w.diffKey];
+    var twoP = w.mode === '2p';
+    ctx.font = 'bold 12px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(190,215,245,0.8)';
+    ctx.fillText('第 ' + w.gameNo + ' 局  ·  ' + (twoP ? '双人对战' : d.name) + (w.mode === 'ai' ? '（观战）' : '') + '  ·  三局两胜  ·  局分 ' +
+      w.games.p + ' : ' + w.games.a, K.W / 2, 26);
+
+    ctx.font = 'bold 14px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = '#7fd7ff'; ctx.fillText(twoP ? '玩家1' : '你', K.W / 2 - 128, 48);
+    ctx.fillStyle = '#ff9d7a'; ctx.fillText(twoP ? '玩家2' : '电脑', K.W / 2 + 128, 48);
+    ctx.font = 'bold 32px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = '#eaf2ff';
+    ctx.fillText(String(w.score.p), K.W / 2 - 128, 70);
+    ctx.fillText(String(w.score.a), K.W / 2 + 128, 70);
+    ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(200,220,255,0.5)';
+    ctx.fillText(':', K.W / 2, 66);
+
+    // 局分小圆点（每局一个，赢下的点亮）
+    var need = Math.ceil(K.BEST_OF / 2);
+    for (var gi = 0; gi < need; gi++) {
+      var gy = 62, gx1 = K.W / 2 - 92 + gi * 14, gx2 = K.W / 2 + 92 - gi * 14;
+      ctx.beginPath();
+      ctx.arc(gx1, gy, 4.5, 0, 6.2832);
+      ctx.fillStyle = gi < w.games.p ? '#5ad2ff' : 'rgba(120,150,190,0.28)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(gx2, gy, 4.5, 0, 6.2832);
+      ctx.fillStyle = gi < w.games.a ? '#ff8a5c' : 'rgba(120,150,190,0.28)';
+      ctx.fill();
+    }
+
+    // 左上角信息
+    ctx.textAlign = 'left';
+    ctx.font = '13px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(190,210,240,0.7)';
+    ctx.fillText('本回合 ' + w.rallyHits + ' 拍', 20, 28);
+    ctx.fillText('最长回合 ' + w.longestRally + ' 拍', 20, 48);
+    ctx.fillText('你击球 ' + w.p.hits + ' 次 / 电脑 ' + w.a.hits + ' 次', 20, 68);
+    /* 这两行用同一套排版：标签 + "你 X" + 空格 + "电脑 Y"，两边的数值间距一致 */
+    var aiMode = w.mode === 'ai';
+    var lb1 = aiMode ? '电脑A' : (twoP ? '玩家1' : '你');
+    var lb2 = aiMode ? '电脑B' : (twoP ? '玩家2' : '电脑');
+    var lb1s = twoP ? 'P1 ' : '我 ', lb2s = twoP ? 'P2 ' : '它 ';
+    ctx.fillText('连得   ' + lb1 + ' ' + w.streak.p + ' 分（最高 ' + w.bestStreak.p + '）　' +
+      lb2 + ' ' + w.streak.a + ' 分（最高 ' + w.bestStreak.a + '）', 20, 88);
+    ctx.fillText('最快   ' + lb1 + ' ' + (w.gameMaxSpeed.p / 65 * 3.6).toFixed(0) + ' km/h　' +
+      lb2 + ' ' + (w.gameMaxSpeed.a / 65 * 3.6).toFixed(0) + ' km/h', 20, 106);
+    // 只要两个数：双方各自最近一次击球的出球速度
+    var lastP = 0, lastA = 0;
+    for (var hi = 0; hi < w.hitLog.length; hi++) {
+      if (w.hitLog[hi].side === "p") lastP = w.hitLog[hi].spd; else lastA = w.hitLog[hi].spd;
+    }
+    ctx.fillText("击球速度   " + lb1 + " " + (lastP / 65 * 3.6).toFixed(0) + " km/h　" +
+      lb2 + " " + (lastA / 65 * 3.6).toFixed(0) + " km/h", 20, 124);
+
+    // 右上角操作提示
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(190,210,240,0.55)';
+    ctx.fillText('H 落点提示' + (showHints ? '（开）' : '（关）') + '   M 音效' + (soundOn ? '（开）' : '（关）'), K.W - 20, 28);
+    ctx.fillText('P 暂停   R 重开   build ' + BUILD, K.W - 20, 48);
+
+    // 中央提示语
+    if (w.msgT > 0 && w.msg) {
+      var a = Math.min(1, w.msgT / 0.45);
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = a;
+      ctx.font = 'bold ' + (w.msg.length > 6 ? 30 : 46) + 'px "Microsoft YaHei",system-ui,sans-serif';
+      ctx.fillStyle = w.msg === '得分' ? '#9ef7c0' : '#ffb1a0';
+      ctx.fillText(w.msg, K.W / 2, 190);
+      ctx.globalAlpha = 1;
+    }
+
+    // 发球提示
+    if (w.state === 'serve') {
+      ctx.textAlign = 'center';
+      if (w.server === 'p') {
+        ctx.fillStyle = 'rgba(160,215,255,' + (0.55 + 0.35 * Math.sin(world.time * 5)).toFixed(2) + ')';
+        ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
+        ctx.fillText(twoP ? '玩家1 按 空格 发球（按 S 发短球）' : '按 空格 / J 发球', K.W / 2, 300);
+        ctx.font = '14px "Microsoft YaHei",system-ui,sans-serif';
+        ctx.fillStyle = 'rgba(160,200,240,0.6)';
+        ctx.fillText(twoP ? '发球必须落在前发球线与端线之间，否则判违例'
+          : '按 S 发低平短球（对手只能下手接）；发球必须落在前发球线与端线之间，否则判违例', K.W / 2, 326);
+      } else {
+        ctx.fillStyle = 'rgba(255,170,140,0.75)';
+        ctx.font = 'bold 18px "Microsoft YaHei",system-ui,sans-serif';
+        if (twoP) {
+          ctx.fillStyle = 'rgba(255,170,140,' + (0.55 + 0.35 * Math.sin(world.time * 5)).toFixed(2) + ')';
+          ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
+          ctx.fillText('玩家2 按 小键盘5 发球（按 2 发短球）', K.W / 2, 300);
+        } else {
+          ctx.fillText('电脑发球…', K.W / 2, 300);
+        }
+      }
+    }
+
+    // 底线操作说明（比赛中常显）
+    ctx.textAlign = 'center';
+    ctx.font = '13px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(170,195,230,0.5)';
+    if (world.mode === '2p') {
+      ctx.fillText('玩家1：A/D 移动  W 起跳  空格 挥拍  S 吊球  Shift/K 高远      ' +
+        '玩家2：小键盘 4/6 移动  8 跳  0 挥拍  5 吊球  Enter 高远球', K.W / 2, K.H - 8);
+    } else {
+      ctx.fillText('A/D 移动    W 起跳    空格 挥拍    S 直接吊球    Shift / K 直接高远球', K.W / 2, K.H - 12);
+    }
+    drawInputPanel();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ------------------------------------------------------------ 渲染主函数
+  function render() {
+    if (!world) return;
+    ctx.save();
+    var sh = world.shake;
+    if (sh > 0.001) {
+      ctx.translate((Math.random() - 0.5) * 14 * sh, (Math.random() - 0.5) * 10 * sh);
+    }
+    drawBackground();
+    drawCourt();
+    drawLandingHint();
+    drawNet();
+    // 后面的选手先画
+    var order = [world.a, world.p];
+    for (var i = 0; i < order.length; i++) {
+      var pl = order[i];
+      if (pl.side === 'p') drawStickman(pl, '#5ad2ff', '#1c6ea8');
+      else drawStickman(pl, '#ff8a5c', '#a83c1c');
+    }
+    drawShuttle();
+
+    // 粒子
+    for (var k = 0; k < particles.length; k++) {
+      var pa = particles[k];
+      ctx.globalAlpha = Math.max(0, pa.life / pa.max);
+      ctx.fillStyle = pa.c;
+      ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.r, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (var r = 0; r < rings.length; r++) {
+      var rg = rings[r], pr = rg.t / rg.dur;
+      ctx.globalAlpha = Math.max(0, 1 - pr) * 0.8;
+      ctx.strokeStyle = rg.c;
+      ctx.lineWidth = 3 * (1 - pr) + 1;
+      ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.max * pr + 4, 0, 6.2832); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    drawHUD();
+  }
+
+  function updateFx(dt) {
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.life -= dt;
+      p.vy += 900 * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.99;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (var j = rings.length - 1; j >= 0; j--) {
+      rings[j].t += dt;
+      if (rings[j].t >= rings[j].dur) rings.splice(j, 1);
+    }
+  }
+
+  // ------------------------------------------------------------ 主循环
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    if (!lastTs) lastTs = ts;
+    var dt = Math.min(0.05, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    if (state === 'playing' && world) {
+      acc += dt;
+      var guard = 0;
+      while (acc >= K.FIXED && guard < 16) {
+        BAD.stepWorld(world, input, K.FIXED, input2);
+        handleEvents();
+        acc -= K.FIXED;
+        guard++;
+      }
+      if (acc > 0.3) acc = 0;
+      updateFx(dt);
+      if (world.state === 'over') showOver();
+    } else {
+      updateFx(dt);
+    }
+    render();
+  }
+
+  // ------------------------------------------------------------ 菜单 / 流程
+  function startMatch(d, m) {
+    diff = d || diff;
+    mode = m || mode;
+    BAD.seed(Date.now() & 0x7fffffff);
+    world = BAD.createWorld(diff, mode);
+    particles = []; rings = [];
+    acc = 0; lastTs = 0;
+    state = 'playing';
+    showHints = diff !== 'hell';
+    input.left = input.right = input.jump = input.swing = input.drop = input.high = false;
+    input2.left = input2.right = input2.jump = input2.swing = input2.drop = input2.high = false;
+    document.getElementById('menu').classList.add('hide');
+    document.getElementById('over').classList.add('hide');
+    document.getElementById('pause').classList.add('hide');
+    audio();
+  }
+
+  function showOver() {
+    if (state === 'over') return;
+    state = 'over';
+    var w = world;
+    var twoP = w.mode === '2p';
+    document.getElementById('overTitle').textContent = twoP
+      ? (w.winner === 'p' ? '玩 家 1 获 胜' : '玩 家 2 获 胜')
+      : (w.winner === 'p' ? '你 赢 了 ！' : '你 输 了');
+    document.getElementById('overTitle').style.color = w.winner === 'p' ? '#9ef7c0' : '#ff9d7a';
+    document.getElementById('overScore').textContent = w.games.p + ' : ' + w.games.a;
+    var gs = w.gameScores.map(function (g, i) {
+      return '第' + (i + 1) + '局 ' + g.p + ':' + g.a;
+    }).join('　·　');
+    document.getElementById('overInfo').innerHTML =
+      '局分（三局两胜）<br>' + gs + '<br>' +
+      (twoP ? '双人对战' : '难度 <b>' + BAD.DIFFS[w.diffKey].name + '</b>') +
+      '　·　最长回合 <b>' + w.longestRally + '</b> 拍　·　最高连得：' +
+      (twoP ? '玩家1' : '你') + ' <b>' + w.bestStreak.p + '</b> / ' +
+      (twoP ? '玩家2' : '电脑') + ' <b>' + w.bestStreak.a + '</b>　·　' +
+      '你击球 <b>' + w.p.hits + '</b> 次　·　电脑击球 <b>' + w.a.hits + '</b> 次';
+    document.getElementById('over').classList.remove('hide');
+  }
+
+  document.getElementById('btnStart').addEventListener('click', function () {
+    startMatch(document.querySelector('input[name=diff]:checked').value, mode);
+  });
+  document.querySelectorAll('.modepick').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.modepick').forEach(function (o) { o.classList.remove('sel'); });
+      b.classList.add('sel');
+      mode = b.dataset.m;
+      document.getElementById('diffWrap').classList.toggle('off', mode === '2p');
+      document.getElementById('diffNote').textContent = mode === '2p'
+        ? '双人同屏对战：左侧用 A/D + 空格系列键，右侧用小键盘 4/6 + 5 系列键。三局两胜，每局 15 分。'
+        : notes[document.querySelector('input[name=diff]:checked').value];
+    });
+  });
+  document.querySelectorAll('input[name=diff]').forEach(function (r) {
+    r.addEventListener('change', function () { document.getElementById('diffNote').textContent = notes[r.value]; });
+  });
+  var notes = {
+    easy: '电脑移动慢、反应迟钝、几乎不主动进攻 —— 适合先熟悉手感',
+    normal: '电脑能预判落点、会吊网前，失误明显减少',
+    hard: '电脑抢高点进攻，扣杀刁钻，回位几乎没有空档（推荐）',
+    hell: '电脑 0.05 秒反应、精准压角、七成高点球直接扣杀 —— 真正的地狱'
+  };
+  document.getElementById('diffNote').textContent = notes['hard'];
+
+  document.getElementById('btnRestart').addEventListener('click', function () { startMatch(diff, mode); });
+  document.getElementById('btnMenu').addEventListener('click', function () {
+    state = 'menu';
+    document.getElementById('over').classList.add('hide');
+    document.getElementById('menu').classList.remove('hide');
+  });
+  document.getElementById('btnResume').addEventListener('click', function () { togglePause(); });
+  document.getElementById('btnQuit').addEventListener('click', function () {
+    state = 'menu';
+    document.getElementById('pause').classList.add('hide');
+    document.getElementById('menu').classList.remove('hide');
+  });
+  document.querySelectorAll('.diffpick').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.diffpick').forEach(function (o) { o.classList.remove('sel'); });
+      b.classList.add('sel');
+      var v = b.dataset.d;
+      document.querySelector('input[name=diff][value=' + v + ']').checked = true;
+      document.getElementById('diffNote').textContent = notes[v];
+    });
+  });
+
+  function togglePause() {
+    if (state === 'playing') {
+      state = 'paused';
+      document.getElementById('pause').classList.remove('hide');
+    } else if (state === 'paused') {
+      state = 'playing';
+      lastTs = 0;
+      document.getElementById('pause').classList.add('hide');
+    }
+  }
+
+  // ------------------------------------------------------------ 输入
+  var keyMap = {
+    ArrowLeft: 'left', a: 'left', A: 'left',
+    ArrowRight: 'right', d: 'right', D: 'right',
+    ArrowUp: 'jump', w: 'jump', W: 'jump',
+    ArrowDown: 'drop', s: 'drop', S: 'drop', l: 'drop', L: 'drop',
+    k: 'high', K: 'high',
+    ' ': 'swing', j: 'swing', J: 'swing'
+  };
+  /* 同时按"物理键位"识别一遍：中文输入法、非英文键盘布局下 e.key 可能不是字母，
+   * 用 e.code 兜底可以避免"S 和 Shift 按了没反应"。 */
+  var codeMap = {
+    ArrowLeft: 'left', KeyA: 'left',
+    ArrowRight: 'right', KeyD: 'right',
+    ArrowUp: 'jump', KeyW: 'jump',
+    ArrowDown: 'drop', KeyS: 'drop', KeyL: 'drop',
+    KeyK: 'high', ShiftLeft: 'high', ShiftRight: 'high',
+    Space: 'swing', KeyJ: 'swing'
+  };
+  /* 副键盘（numpad）键位，给双人模式的玩家2。
+   * 全部按 e.code 识别，这样 NumLock 开着还是关着都一样好用。 */
+  var codeMap2 = {
+    Numpad4: 'left', Numpad6: 'right', Numpad8: 'jump',
+    Numpad0: 'swing',
+    Numpad5: 'drop',
+    Enter: 'high', NumpadEnter: 'high',
+    // 没有小键盘的笔记本可以用方向键 + 回车
+    ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'jump'
+  };
+  /* 返回 { who: 1|2, act: 'left'|... }，双人模式下方向键归玩家2 */
+  function keyOf(e) {
+    var c = e.code || '';
+    if (mode === '2p') {
+      if (codeMap2[c]) return { who: 2, act: codeMap2[c] };
+      if (codeMap[c]) return { who: 1, act: codeMap[c] };
+    } else {
+      if (codeMap[c]) return { who: 1, act: codeMap[c] };
+    }
+    var k = keyMap[e.key];
+    if (k) return { who: 1, act: k };
+    var k2 = { '4': 'left', '6': 'right', '8': 'jump', '0': 'swing', '5': 'drop' }[e.key];
+    if (mode === '2p' && e.key === 'Enter') return { who: 2, act: 'high' };
+    if (mode === '2p' && k2) return { who: 2, act: k2 };
+    return null;
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Shift') { input.high = true; e.preventDefault(); return; }
+    var k = keyOf(e);
+    if (k) { (k.who === 2 ? input2 : input)[k.act] = true; e.preventDefault(); }
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') togglePause();
+    if (e.key === 'r' || e.key === 'R') { if (world) startMatch(diff, mode); }
+    if (e.key === 'h' || e.key === 'H') showHints = !showHints;
+    if (e.key === 'm' || e.key === 'M') soundOn = !soundOn;
+    if (e.key === 'Enter' && state === 'menu') document.getElementById('btnStart').click();
+  });
+  window.addEventListener('keyup', function (e) {
+    if (e.key === 'Shift') { input.high = false; return; }
+    var k = keyOf(e);
+    if (k) { (k.who === 2 ? input2 : input)[k.act] = false; e.preventDefault(); }
+  });
+  window.addEventListener('blur', function () {
+    input.left = input.right = input.jump = input.swing = input.drop = input.high = false;
+    input2.left = input2.right = input2.jump = input2.swing = input2.drop = input2.high = false;
+  });
+
+  // 触屏按钮
+  document.querySelectorAll('.tbtn').forEach(function (b) {
+    var key = b.dataset.k;
+    var press = function (ev) { ev.preventDefault(); input[key] = true; b.classList.add('on'); };
+    var release = function (ev) { if (ev) ev.preventDefault(); input[key] = false; b.classList.remove('on'); };
+    b.addEventListener('pointerdown', press);
+    b.addEventListener('pointerup', release);
+    b.addEventListener('pointercancel', release);
+    b.addEventListener('pointerleave', release);
+  });
+
+  // ------------------------------------------------------------ 启动
+  resize();
+  BAD.seed(20260926);
+  world = BAD.createWorld('hard');
+  state = 'menu';
+  requestAnimationFrame(frame);
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    document.getElementById('touch').classList.remove('hide');
+  }
+})();
+
+</script>
+</body>
+</html>
