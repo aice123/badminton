@@ -537,10 +537,25 @@
     var contactD = clamp(ownDepth(own, contact.x), 0, 436);
     var kind = opts.kind;
     var lowVaried = false;
+    var forcedKind = false;      // 锁定的球种，不许被随机/反重复改掉
+    /* 接后场高远球（只对电脑）：玩家上一拍是高远球时，电脑也回高远球压到底线。
+     * 不设高度门槛 —— 万一真的晚了，也要能把球挑/送到底线，而不是软绵绵回中场。 */
+    var _replyClear = !!opts.replyClear;
     if (!kind) {
       /* 优先级：吊球 > 高远 > 自动扣杀。
        * 之前"高远"排在吊球前面，一旦 Shift 状态卡住，按 S 就永远无效。 */
-      if (opts.drop) kind = 'drop';
+      if (_replyClear) {
+        /* 对拉高远不能一直回高远：三成概率改成下压（杀球/劈吊/平抽），
+         * 剩下的回高远 —— 既打破无休止的对拉，也让对手猜不到下一拍。 */
+        if (rnd() < 0.30) {
+          var _down = rnd();
+          if (h >= 150 && _down < 0.55) kind = 'smash';
+          else if (_down < 0.82) kind = 'drop';
+          else kind = 'drive';
+        } else { kind = 'clear'; lowVaried = true; }
+        forcedKind = true;
+      }
+      else if (opts.drop) kind = 'drop';
       // 玩家主动打高球：低位时是"挑球"（要高），高点时才是"高远球"
       else if (opts.high) kind = h <= 92 ? 'lift' : 'clear';
       else if (opts.smash && h > 138) kind = 'smash';
@@ -567,7 +582,7 @@
       }
       else kind = 'lift';
       /* 随机性：按当前球高挑几种"合理但不同"的打法，让对手猜不到下一拍 */
-      if (opts.mix && !lowVaried && rnd() < opts.mix) {
+      if (opts.mix && !lowVaried && !forcedKind && rnd() < opts.mix) {
         var pool = [];
         if (h > 120) pool.push('smash');
         if (h > 85) { pool.push('drive'); pool.push('clear'); }
@@ -578,7 +593,7 @@
       }
       /* 反重复 / 迷惑性：如果这一拍跟上一拍是同一种球路，大概率换一个打法。
        * 否则电脑会"连着挑好几拍"，节奏完全可预测。 */
-      if (opts.antiRepeat && p.lastKind === kind && rnd() < 0.5) {
+      if (opts.antiRepeat && !forcedKind && p.lastKind === kind && rnd() < 0.5) {
         var alt = [];
         if (h > 120) alt.push('smash');
         if (h > 85) { alt.push('drive'); alt.push('clear'); }
@@ -645,7 +660,7 @@
     var pace = opts.pace || 1;
     var grav = (kind === 'clear') ? K.G_CLEAR : K.G;
     var apexLimit = Math.max(
-      kind === 'clear' ? CLEAR_APEX : (kind === 'lift' ? LIFT_APEX : APEX_CAP * pace), h + 70);
+      kind === 'clear' ? (opts.clearApex || CLEAR_APEX) : (kind === 'lift' ? LIFT_APEX : APEX_CAP * pace), h + 70);
 
     for (var i = 0; i < angles.length; i++) {
       var sol = solveShot(contact.x, contact.y, target, angles[i], cap, grav);
@@ -890,7 +905,7 @@
 
     if (it.swing && p.swingT <= 0 && p.cooldown <= 0) {
       /* AI 自己知道还有多久触球，用它作为预测跨度；玩家固定按 0.14s 估 */
-      p.swingStyle = pickSwingStyle(w, p.swingHorizon || 0.14);
+      p.swingStyle = it.swingStyle || pickSwingStyle(w, p.swingHorizon || 0.14);
       p.swingT = K.SWING_DUR;
       /* 挡网（接杀）的收拍更快：第一下时机不对还能马上补第二下。
        * 这是接杀能力的另一个直接来源 —— 之前一次挥空要等 0.4 秒，杀球早落地了。 */
@@ -950,6 +965,8 @@
         maxSpeed: K.SHOT_MAX * (p.isAI ? w.diff.power : 1),
         pace: p.isAI ? (w.diff.pace === undefined ? 1 : w.diff.pace) : 1,
         mix: p.isAI ? (w.diff.mix || 0) : 0,
+        replyClear: p.isAI && w.lastHitKind === 'clear',
+        clearApex: 470,
         antiRepeat: !!p.isAI,
         jitter: p.isAI ? (w.diff.jitter || 0) : 0
       });
@@ -967,6 +984,7 @@
     p.hits++;
     p.wantDrop = false;
     w.lastHitter = p.side;
+    w.rallyT = 0;              // 回合计时只防「球卡住」，每打一拍就重新计时
     w.rallyHits++;
     if (w.rallyHits > w.longestRally) w.longestRally = w.rallyHits;
     if (plan.kind === 'smash') w.shake = Math.min(1, w.shake + 0.85);
@@ -1109,7 +1127,7 @@
 
   function aiBrain(w, p, dt) {
     var it = p.intent;
-    it.left = 0; it.right = 0; it.jump = false; it.swing = false; it.drop = false;
+    it.left = 0; it.right = 0; it.jump = false; it.swing = false; it.drop = false; it.swingStyle = null;
     var ai = p.ai;
     var own = p.side, opp = own === 'p' ? 'a' : 'p';
     var oppP = opp === 'p' ? w.p : w.a;
@@ -1149,13 +1167,15 @@
       // 对手还在处理球 —— 预判来球落点，提前移动到能覆盖的位置
       var sim0 = ballSim(b.x, b.y, b.vx, b.vy, 3.8, 4, b.g);
       var landD = (sim0.landX === null) ? null : ownDepth(own, sim0.landX);
-      if (landD !== null && landD > 60) {
+      if (landD !== null && landD > 0) {
         /* 站到落点与中场之间。球越快（杀球/平抽）越要果断压上去，
          * 慢慢吊过来的球才留调整余量 —— 这是"接杀能力"的关键。 */
         var fast0 = hypot(b.vx, b.vy) > 1100;
-        var commit = fast0 ? 0.95 : 0.6;
-        var errW = fast0 ? 0.15 : 0.45;
-        var preD = clamp(lerp(290, clamp(landD, 90, 415), commit) + ai.errX * errW, 95, 415);
+        /* 站位坚决度：站不到落点，球就会落在身后 —— 只能等它掉到腰下去打。
+         * 慢球（高远球/吊球）从 0.6 提到 0.86，站位误差也收窄。 */
+        var commit = fast0 ? 0.95 : 0.86;
+        var errW = fast0 ? 0.15 : 0.30;
+        var preD = clamp(lerp(290, clamp(landD, 45, 415), commit) + ai.errX * errW, 60, 415);
         moveToX(p, clamp(xOf(own, -preD), minX, maxX), spd, it);
         if (w.debug) {
           var d3 = w.aiDebug[own];
@@ -1181,7 +1201,7 @@
     for (var i = 0; i < sim.samples.length; i++) {
       var s = sim.samples[i];
       var sd = ownDepth(own, s.x);
-      if (sd < 34 || sd > 452) continue;
+      if (sd < 8 || sd > 452) continue;      // 贴网的球也要能打（原来 34 = 放弃网前球）
       var hh = K.GROUND - s.y;
       if (hh < 8 || hh > 205) continue;           // 拍子够得着的高度区间
       var wantX = clamp(s.x - sgn * 26, minX, maxX);
@@ -1263,15 +1283,54 @@
     var jy = K.JUMP_V * jumpT - 0.5 * K.PG * jumpT * jumpT;
     var jumpReady = Math.abs(p.x - pick.x) <= 88;
     var jumpReach = hPick >= jy + 20 && hPick <= jy + 230;
-    if (p.onGround && ai.style === 'attack' && hPick >= 170 && tPick >= 0.15 && tPick <= 0.36 &&
+    var jumpZone = ownDepth(own, pick.x) < 320;      // 只禁止「最靠后那一段」起跳，前中场的跳杀保留
+    if (p.onGround && ai.style === 'attack' && w.lastHitKind !== 'clear' && jumpZone && hPick >= 170 && tPick >= 0.15 && tPick <= 0.36 &&
         jumpReady && jumpReach && p.swingT <= 0 && p.cooldown <= 0 && ballOnMySide) {
       it.jump = true;
       if (w.debug) w.aiDebug[own].jumpSmash = Math.round(tPick * 1000);
     }
 
-    var fire = canSwing && ballOnMySide && (gapNow < -8 ||
-      (predGap < 5 && tPick <= wnd[1] + 0.02) ||
-      (tPick <= wnd[1] - 0.005 && tPick >= wnd[0] - 0.005 && Math.abs(p.x - pick.x) <= gapAllow));
+    /* 这一挥到底能不能碰到球？不估算，直接在脑子里按游戏的判定重演一遍：
+     * 球按真实物理一帧一帧走，拍子按挥拍动画（同一个动作、同一个有效窗口）走，
+     * 用同一套判定圈（拍尖 50 / 身体 86）去比对。模拟碰不到就不挥 ——
+     * 空挥会被冷却锁死 0.4 秒，这段时间球会一路掉到腰下甚至地面，
+     * 那就是「慢球被放掉」「腰下接球」的真正来源。 */
+    var _horizon = clamp(tPick, 0.03, 0.25);
+    var _st = pickSwingStyle(w, _horizon);
+    var _keep = p.swingStyle;
+    p.swingStyle = _st;
+    var _sw = swingWindow(p, false);
+    p.swingStyle = _keep;
+    var _rm = p.isAI ? ((w.diff && w.diff.reachMul) || 1) : 1;
+    var _sb = { x: b.x, y: b.y, vx: b.vx, vy: b.vy, g: (b.g === undefined ? K.G : b.g) };
+    var _probe = { x: p.x, y: p.y, facing: p.facing, anim: p.anim, swingStyle: _st, swingT: 0 };
+    /* 人自己的位移也要按 stepPlayer 的加速模型一起推，否则算出来的位置会偏几十像素 */
+    var _dir = (it.right ? 1 : 0) - (it.left ? 1 : 0);
+    var _maxS = p.isAI ? w.diff.speed : K.PLAYER_SPEED;
+    var _pvx = p.vx, _acc = K.MOVE_ACCEL * K.FIXED;
+    var _hitOK = false, _hitD = 999, _hitH = -1, _hitT = -1, _el = 0;
+    var _steps = Math.ceil(K.SWING_DUR / K.FIXED);
+    for (var _qi = 0; _qi < _steps; _qi++) {
+      stepBall(_sb, K.FIXED);
+      var _tgt = _dir * _maxS;
+      if (_pvx < _tgt) _pvx = Math.min(_tgt, _pvx + _acc); else _pvx = Math.max(_tgt, _pvx - _acc);
+      _probe.x = clamp(_probe.x + _pvx * K.FIXED, minX, maxX);
+      _el = (_qi + 1) * K.FIXED;
+      if (_el < _sw[0]) continue;
+      if (_el > _sw[1]) break;
+      _probe.swingT = K.SWING_DUR - _el;                        // 该时刻的挥拍进度
+      _probe.y = p.onGround ? p.y : Math.max(0, p.y + p.vy * _el - 0.5 * K.PG * _el * _el);
+      var _tp = racketTip(_probe), _bp = bodyCenter(_probe);
+      var _gd = Math.min(hypot(_sb.x - _tp.x, _sb.y - _tp.y) - K.TIP_R * _rm,
+                         hypot(_sb.x - _bp.x, _sb.y - _bp.y) - K.BODY_R * _rm);
+      if (_gd < _hitD) { _hitD = _gd; _hitH = Math.round(K.GROUND - _sb.y); _hitT = +_el.toFixed(3); }
+      /* 留 14px 余量：推演和实际总会差一点点，卡着边界挥出去就是空挥 */
+      if (_gd < -14) { _hitOK = true; break; }
+    }
+    /* 最后一搏：球快落地、拍子只差一点点就够得着时也要挥出去，
+     * 否则画面上就是「站着看球落地」——再差也像个在救球的人。 */
+    var _lunge = !_hitOK && _hitD < 30 && _hitH >= 0 && _hitH < 70;
+    var fire = canSwing && ballOnMySide && (gapNow < -8 || _hitOK || _lunge);
     if (w.debug) {
       var d2 = w.aiDebug[own];
       d2.tPick = +tPick.toFixed(3);
@@ -1282,9 +1341,16 @@
       d2.fire = fire;
       d2.px = Math.round(p.x);
       d2.pickX = Math.round(pick.x);
+      d2.wnd = _sw[0].toFixed(2) + '~' + _sw[1].toFixed(2);
+      d2.st = _st;
+      d2.hitOK = _hitOK;
+      d2.hitD = Math.round(_hitD);
+      d2.hitH = _hitH;
+      d2.hitT = _hitT;
     }
     if (fire) {
       it.swing = true;
+      it.swingStyle = _st;
       p.swingHorizon = clamp(tPick, 0.03, 0.25);
       var drop = false;
       if (ai.style === 'control') drop = (hPick < 150) ? (rnd() < 0.55) : (rnd() < 0.8);
