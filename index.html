@@ -82,12 +82,24 @@
     pointer-events: auto; backdrop-filter: blur(3px); touch-action: none; user-select: none;
   }
   .tbtn.on { background: rgba(110, 190, 255, .45); }
-  .tbtn[data-k="left"]  { left: 2vmin; }
-  .tbtn[data-k="right"] { left: 16vmin; }
-  /* 右侧四个键：整块位置不变，只调整内部顺序 ——
-   * 屏幕上从左到右:  吊球  高远  跳  挥拍
-   * （挥拍和跳挨在一起、紧贴右手拇指；高远和吊球挨在一起在其外侧） */
-  .tbtn[data-k="drop"]  { right: 46.5vmin; }
+  /* 移动 + 起跳已并入左下角虚拟摇杆，这三个键在手机端隐藏 */
+  .tbtn[data-k="left"], .tbtn[data-k="right"], .tbtn[data-k="jump"] { display: none; }
+  /* 动作键：屏幕上从左到右 吊球 高远 挥拍（挥拍最贴右手拇指） */
+  .tbtn[data-k="drop"]  { right: 33vmin; }
+  /* 虚拟摇杆：左右推=移动，往上推=起跳 */
+  .stick {
+    position: absolute; bottom: 2vmin; width: 26vmin; height: 26vmin; min-width: 92px; min-height: 92px;
+    max-width: 150px; max-height: 150px; border-radius: 50%;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.20);
+    pointer-events: auto; touch-action: none;
+  }
+  .stick .knob {
+    position: absolute; left: 50%; top: 50%; width: 40%; height: 40%; margin: -20% 0 0 -20%;
+    border-radius: 50%; background: rgba(150,205,255,.35); border: 1px solid rgba(200,230,255,.55);
+  }
+  #stick1 { left: 2vmin; }
+  #stick2 { right: 2vmin; display: none; }
+  #touch.twoP #stick2 { display: block; }
   /* 手机端系统键：暂停 / 音效 / 返回菜单（小尺寸，右上角） */
   #sysbtns { position: absolute; right: 1.5vmin; top: 1.5vmin; display: flex; gap: 1.4vmin; }
   .sbtn {
@@ -97,8 +109,7 @@
     pointer-events: auto; touch-action: none; user-select: none; backdrop-filter: blur(3px);
   }
   .sbtn:active { background: rgba(110,190,255,.45); }
-  .tbtn[data-k="high"]  { right: 32vmin; }
-  .tbtn[data-k="jump"]  { right: 17.5vmin; }
+  .tbtn[data-k="high"]  { right: 17.5vmin; }
   .tbtn[data-k="swing"] { right: 1.5vmin; width: 14vmin; height: 14vmin; max-width: 106px; max-height: 106px; font-size: 3.4vmin; }
   /* ---------- 双人模式的触屏布局：左右各一套、镜像排布 ---------- */
   .p2btn { display: none; }
@@ -108,20 +119,16 @@
   /* 玩家1（左侧） */
   #touch.twoP .tbtn[data-side="1"] { left: auto; right: auto; }
   #touch.twoP .tbtn[data-side="1"][data-k="left"]  { left: 1vmin; }
-  #touch.twoP .tbtn[data-side="1"][data-k="right"] { left: 12.5vmin; }
-  #touch.twoP .tbtn[data-side="1"][data-k="jump"]  { left: 24vmin; }
-  #touch.twoP .tbtn[data-side="1"][data-k="high"]  { left: 35.5vmin; }
-  #touch.twoP .tbtn[data-side="1"][data-k="swing"] { left: 47vmin; }
-  #touch.twoP .tbtn[data-side="1"][data-k="drop"]  { left: 60vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="swing"] { left: 30vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="high"]  { left: 44vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="drop"]  { left: 58vmin; }
   /* 玩家2（右侧）：与玩家1 完全镜像 —— 同名键到各自屏幕边缘的距离相同 */
   #touch.twoP .tbtn[data-side="2"] { right: auto; left: auto; }
   /* 方向键特殊处理：不论哪一侧，屏幕上从左到右都要是 "◀ ▶"（符合直觉） */
   #touch.twoP .tbtn[data-side="2"][data-k="left"]  { right: 12.5vmin; }
-  #touch.twoP .tbtn[data-side="2"][data-k="right"] { right: 1vmin; }
-  #touch.twoP .tbtn[data-side="2"][data-k="jump"]  { right: 24vmin; }
-  #touch.twoP .tbtn[data-side="2"][data-k="high"]  { right: 35.5vmin; }
-  #touch.twoP .tbtn[data-side="2"][data-k="swing"] { right: 47vmin; }
-  #touch.twoP .tbtn[data-side="2"][data-k="drop"]  { right: 60vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="swing"] { right: 30vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="high"]  { right: 44vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="drop"]  { right: 58vmin; }
   /* 小屏 / 矮屏：整体压缩，保证菜单一屏装得下（不改变桌面观感） */
   @media (max-height: 780px), (max-width: 560px), (orientation: portrait) {
     .panel { padding: 14px 16px 12px; border-radius: 14px; }
@@ -152,6 +159,8 @@
     <div id="rotate">📱 请横屏游玩<br><span class="sub2">请使用浏览器打开</span></div>
 
     <div id="touch" class="hide">
+      <div class="stick" id="stick1"><div class="knob"></div></div>
+      <div class="stick" id="stick2"><div class="knob"></div></div>
       <div id="sysbtns">
         <div class="sbtn" id="sysSound" title="音效">🔊</div>
         <div class="sbtn" id="sysPause" title="暂停">⏸</div>
@@ -2284,6 +2293,40 @@
     b.addEventListener('pointercancel', release);
     b.addEventListener('pointerleave', release);
   });
+
+  /* 虚拟摇杆：左右推 = 移动，往上推 = 起跳（手机端把 移动+跳 合成一个控件） */
+  function setupStick(id, target) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var knob = el.querySelector('.knob');
+    var active = false, R = 40;
+    function apply(cx, cy) {
+      var r = el.getBoundingClientRect();
+      R = r.width * 0.5;
+      var dx = cx - (r.left + R), dy = cy - (r.top + R);
+      var len = Math.hypot(dx, dy);
+      if (len > R) { dx = dx / len * R; dy = dy / len * R; }
+      if (knob) knob.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
+      target.left = dx < -R * 0.28;
+      target.right = dx > R * 0.28;
+      target.jump = dy < -R * 0.45;      // 往上推过半即起跳
+    }
+    function reset() {
+      active = false;
+      if (knob) knob.style.transform = '';
+      target.left = target.right = target.jump = false;
+    }
+    el.addEventListener('pointerdown', function (e) {
+      active = true; if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+      apply(e.clientX, e.clientY); e.preventDefault();
+    });
+    el.addEventListener('pointermove', function (e) { if (active) apply(e.clientX, e.clientY); });
+    el.addEventListener('pointerup', reset);
+    el.addEventListener('pointercancel', reset);
+    el.addEventListener('pointerleave', function (e) { if (active && !el.hasPointerCapture) reset(); });
+  }
+  setupStick('stick1', input);
+  setupStick('stick2', input2);
 
   // ------------------------------------------------------------ 启动
   resize();
