@@ -7,7 +7,8 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; height: 100%; overflow: hidden;
+    margin: 0; height: 100%; height: 100dvh; overflow: hidden;
+    touch-action: none; overscroll-behavior: none;
     background: radial-gradient(circle at 50% 0%, #1b2544 0%, #0a0e1a 65%);
     font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
     color: #e8f0ff;
@@ -15,7 +16,7 @@
   }
   #app { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   #stage { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-  canvas { display: block; border-radius: 10px; box-shadow: 0 24px 70px rgba(0, 0, 0, .6); }
+  canvas { display: block; border-radius: 10px; box-shadow: 0 24px 70px rgba(0, 0, 0, .6); touch-action: none; }
 
   .overlay {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -26,6 +27,7 @@
     width: min(560px, 92vw); background: linear-gradient(180deg, rgba(30, 41, 72, .96), rgba(16, 22, 40, .98));
     border: 1px solid rgba(120, 170, 255, .25); border-radius: 18px; padding: 26px 28px 22px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .07);
+    max-height: 94dvh; overflow-y: auto; overscroll-behavior: contain;
   }
   h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: 2px; text-align: center;
        background: linear-gradient(90deg, #7fe3ff, #b9a0ff 55%, #ffb37f);
@@ -73,30 +75,101 @@
   #touch { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
   #touch.hide { display: none; }
   .tbtn {
-    position: absolute; bottom: 16px; width: 62px; height: 62px; border-radius: 50%;
+    position: absolute; bottom: 2vmin; width: 12vmin; height: 12vmin; min-width: 46px; min-height: 46px;
+    max-width: 92px; max-height: 92px; border-radius: 50%;
     background: rgba(255, 255, 255, .10); border: 1px solid rgba(255, 255, 255, .25);
-    color: #dce9ff; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-    pointer-events: auto; backdrop-filter: blur(3px);
+    color: #dce9ff; font-size: 4vmin; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; backdrop-filter: blur(3px); touch-action: none; user-select: none;
   }
   .tbtn.on { background: rgba(110, 190, 255, .45); }
-  .tbtn[data-k="left"]  { left: 16px; }
-  .tbtn[data-k="right"] { left: 92px; }
-  .tbtn[data-k="jump"]  { right: 176px; }
-  .tbtn[data-k="swing"] { right: 96px; width: 74px; height: 74px; font-size: 15px; }
-  .tbtn[data-k="drop"]  { right: 16px; }
+  .tbtn[data-k="left"]  { left: 2vmin; }
+  .tbtn[data-k="right"] { left: 16vmin; }
+  /* 右侧四个键：整块位置不变，只调整内部顺序 ——
+   * 屏幕上从左到右:  吊球  高远  跳  挥拍
+   * （挥拍和跳挨在一起、紧贴右手拇指；高远和吊球挨在一起在其外侧） */
+  .tbtn[data-k="drop"]  { right: 46.5vmin; }
+  /* 手机端系统键：暂停 / 音效 / 返回菜单（小尺寸，右上角） */
+  #sysbtns { position: absolute; right: 1.5vmin; top: 1.5vmin; display: flex; gap: 1.4vmin; }
+  .sbtn {
+    width: 7.5vmin; height: 7.5vmin; min-width: 28px; min-height: 28px; max-width: 42px; max-height: 42px;
+    border-radius: 9px; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.22);
+    color: #dce9ff; font-size: 3.4vmin; line-height: 1; display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; touch-action: none; user-select: none; backdrop-filter: blur(3px);
+  }
+  .sbtn:active { background: rgba(110,190,255,.45); }
+  .tbtn[data-k="high"]  { right: 32vmin; }
+  .tbtn[data-k="jump"]  { right: 17.5vmin; }
+  .tbtn[data-k="swing"] { right: 1.5vmin; width: 14vmin; height: 14vmin; max-width: 106px; max-height: 106px; font-size: 3.4vmin; }
+  /* ---------- 双人模式的触屏布局：左右各一套、镜像排布 ---------- */
+  .p2btn { display: none; }
+  #touch.twoP .p2btn { display: flex; }
+  #touch.twoP .tbtn { width: 10.5vmin; height: 10.5vmin; min-width: 38px; min-height: 38px; font-size: 3.2vmin; transform: none; }
+  #touch.twoP .tbtn[data-k="swing"] { width: 12vmin; height: 12vmin; min-width: 44px; min-height: 44px; font-size: 2.9vmin; }
+  /* 玩家1（左侧） */
+  #touch.twoP .tbtn[data-side="1"] { left: auto; right: auto; }
+  #touch.twoP .tbtn[data-side="1"][data-k="left"]  { left: 1vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="right"] { left: 12.5vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="jump"]  { left: 24vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="high"]  { left: 35.5vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="swing"] { left: 47vmin; }
+  #touch.twoP .tbtn[data-side="1"][data-k="drop"]  { left: 60vmin; }
+  /* 玩家2（右侧）：与玩家1 完全镜像 —— 同名键到各自屏幕边缘的距离相同 */
+  #touch.twoP .tbtn[data-side="2"] { right: auto; left: auto; }
+  /* 方向键特殊处理：不论哪一侧，屏幕上从左到右都要是 "◀ ▶"（符合直觉） */
+  #touch.twoP .tbtn[data-side="2"][data-k="left"]  { right: 12.5vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="right"] { right: 1vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="jump"]  { right: 24vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="high"]  { right: 35.5vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="swing"] { right: 47vmin; }
+  #touch.twoP .tbtn[data-side="2"][data-k="drop"]  { right: 60vmin; }
+  /* 小屏 / 矮屏：整体压缩，保证菜单一屏装得下（不改变桌面观感） */
+  @media (max-height: 780px), (max-width: 560px), (orientation: portrait) {
+    .panel { padding: 14px 16px 12px; border-radius: 14px; }
+    h1 { font-size: 22px; margin-bottom: 2px; }
+    .sub { font-size: 11px; margin-bottom: 10px; }
+    .modepick { padding: 9px 3px; font-size: 12px; }
+    .diffpick { padding: 8px 3px; font-size: 13px; }
+    .moderow, .diffrow { gap: 6px; margin-bottom: 8px; }
+    #diffNote { font-size: 11px; line-height: 1.45; padding: 6px 9px; min-height: 0; margin-bottom: 10px; }
+    .keys { font-size: 11px; gap: 3px 8px; margin-bottom: 10px; }
+    .keys b { padding: 1px 6px; }
+    button.primary { padding: 11px; font-size: 16px; letter-spacing: 2px; }
+    #overTitle { font-size: 26px; letter-spacing: 4px; }
+    #overScore { font-size: 32px; }
+  }
+  /* 竖屏提示：横屏才是 1000x560 的主场 */
+  #rotate { display: none; position: absolute; inset: 0; z-index: 30; align-items: center; justify-content: center;
+            flex-direction: column; gap: 3vmin;
+            background: rgba(6,10,22,.9); color: #cfe4ff; font-size: 5vmin; font-weight: 700; text-align: center; padding: 8vw; }
+  #rotate .sub2 { font-size: 3.2vmin; font-weight: 400; color: #8ea6cc; }
+  @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="stage">
     <canvas id="game" width="1000" height="560"></canvas>
+    <div id="rotate">📱 请横屏游玩<br><span class="sub2">请使用浏览器打开</span></div>
 
     <div id="touch" class="hide">
-      <div class="tbtn" data-k="left">◀</div>
-      <div class="tbtn" data-k="right">▶</div>
-      <div class="tbtn" data-k="jump">跳</div>
-      <div class="tbtn" data-k="swing">挥拍</div>
-      <div class="tbtn" data-k="drop">吊</div>
+      <div id="sysbtns">
+        <div class="sbtn" id="sysSound" title="音效">🔊</div>
+        <div class="sbtn" id="sysPause" title="暂停">⏸</div>
+        <div class="sbtn" id="sysMenu" title="返回菜单">☰</div>
+      </div>
+      <div class="tbtn" data-side="1" data-k="left">◀</div>
+      <div class="tbtn" data-side="1" data-k="right">▶</div>
+      <div class="tbtn" data-side="1" data-k="jump">跳</div>
+      <div class="tbtn" data-side="1" data-k="high">高远</div>
+      <div class="tbtn" data-side="1" data-k="swing">挥拍</div>
+      <div class="tbtn" data-side="1" data-k="drop">吊球</div>
+      <!-- 双人模式：玩家2 的触屏键 -->
+      <div class="tbtn p2btn" data-side="2" data-k="left">◀</div>
+      <div class="tbtn p2btn" data-side="2" data-k="right">▶</div>
+      <div class="tbtn p2btn" data-side="2" data-k="jump">跳</div>
+      <div class="tbtn p2btn" data-side="2" data-k="high">高远</div>
+      <div class="tbtn p2btn" data-side="2" data-k="swing">挥拍</div>
+      <div class="tbtn p2btn" data-side="2" data-k="drop">吊球</div>
     </div>
 
     <div id="menu" class="overlay">
@@ -986,6 +1059,23 @@
   }
 
   /* 开下一局：清空本局比分，由上一局胜者发球 */
+  /* 局点 / 赛点判断：返回发球方和接发球方各自处在什么关口
+   *   'match' = 再得 1 分就赢下整场（赛点）
+   *   'game'  = 再得 1 分就赢下本局（局点）                     */
+  function pointSituation(w) {
+    function winsGame(me, opp) {
+      var s = w.score[me] + 1, o = w.score[opp];
+      return (s >= K.WIN_SCORE && s - o >= 2) || s >= K.WIN_CAP;
+    }
+    var needGames = Math.ceil(K.BEST_OF / 2);
+    var srv = w.server, rcv = srv === 'p' ? 'a' : 'p';
+    var srvGame = winsGame(srv, rcv), rcvGame = winsGame(rcv, srv);
+    return {
+      server: srvGame ? (w.games[srv] + 1 >= needGames ? 'match' : 'game') : null,
+      recv: rcvGame ? (w.games[rcv] + 1 >= needGames ? 'match' : 'game') : null
+    };
+  }
+
   function nextGame(w) {
     w.gameNo++;
     w.score = { p: 0, a: 0 };
@@ -1238,6 +1328,7 @@
     swingStartAngle: swingStartAngle, pickSwingStyle: pickSwingStyle,
     bodyCenter: bodyCenter, shGeom: shGeom,
     xOf: xOf, ownDepth: ownDepth, intoDepth: intoDepth,
+    pointSituation: pointSituation,
     netHit: netHit, stepBallGame: stepBallGame, stepBall: stepBall
   };
 
@@ -1291,6 +1382,16 @@
     canvas.width = Math.round(K.W * scale * dpr);
     canvas.height = Math.round(K.H * scale * dpr);
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    /* 触屏按键层对齐到画布（而不是整个窗口），这样有黑边时按键也不会飘到画布外 */
+    var touchLayer = document.getElementById('touch');
+    if (touchLayer) {
+      touchLayer.style.left = canvas.offsetLeft + 'px';
+      touchLayer.style.top = canvas.offsetTop + 'px';
+      touchLayer.style.width = canvas.offsetWidth + 'px';
+      touchLayer.style.height = canvas.offsetHeight + 'px';
+      touchLayer.style.right = 'auto';
+      touchLayer.style.bottom = 'auto';
+    }
   }
   window.addEventListener('resize', resize);
 
@@ -1411,6 +1512,11 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(200,225,255,0.5)';
     ctx.fillText('火 柴 人 羽 毛 球  ·  高 难 度 版', K.W / 2, 244);
+    // 横幅右端的小署名（清晰但不抢眼）
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px "Microsoft YaHei",system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(160,205,255,0.42)';
+    ctx.fillText('Aice & DeepSeek', K.W - 18, 244);
 
     // 后墙
     ctx.fillStyle = 'rgba(10,16,32,0.92)';
@@ -1817,8 +1923,15 @@
     // 右上角操作提示
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(190,210,240,0.55)';
-    ctx.fillText('H 落点提示' + (showHints ? '（开）' : '（关）') + '   M 音效' + (soundOn ? '（开）' : '（关）'), K.W - 20, 28);
-    ctx.fillText('P 暂停   R 重开   build ' + BUILD, K.W - 20, 48);
+    /* 触屏设备右上角让给系统键（暂停/音效/菜单），键盘提示只在电脑端显示 */
+    var touchUI = document.getElementById('touch') && !document.getElementById('touch').classList.contains('hide');
+    if (!touchUI) {
+      ctx.fillText('H 落点提示' + (showHints ? '（开）' : '（关）') + '   M 音效' + (soundOn ? '（开）' : '（关）'), K.W - 20, 28);
+      ctx.fillText('P 暂停   R 重开   build ' + BUILD, K.W - 20, 48);
+    } else {
+      ctx.fillStyle = 'rgba(190,210,240,0.35)';
+      ctx.fillText('build ' + BUILD, K.W - 16, K.H - 10);
+    }
 
     // 中央提示语
     if (w.msgT > 0 && w.msg) {
@@ -1834,6 +1947,23 @@
     // 发球提示
     if (w.state === 'serve') {
       ctx.textAlign = 'center';
+      /* 局点 / 赛点提示（发球前显示） */
+      var sit = BAD.pointSituation(w);
+      var tip = null, tipCol = '#ffd166';
+      if (sit.server === 'match') { tip = '★ 赛点 —— 再得 1 分就赢下整场'; tipCol = '#ff8a5c'; }
+      else if (sit.server === 'game') { tip = '◆ 局点 —— 再得 1 分就拿下本局'; tipCol = '#ffd166'; }
+      else if (sit.recv === 'match') { tip = '⚠ 对手赛点 —— 这一分丢不得'; tipCol = '#ff8a5c'; }
+      else if (sit.recv === 'game') { tip = '◇ 对手局点 —— 顶住这一分'; tipCol = '#9fd8ff'; }
+      if (tip) {
+        ctx.save();
+        var pulse = 0.7 + 0.3 * Math.sin(world.time * 6);
+        ctx.font = 'bold 22px "Microsoft YaHei",system-ui,sans-serif';
+        ctx.fillStyle = tipCol;
+        ctx.globalAlpha = pulse;
+        ctx.fillText(tip, K.W / 2, 246);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
       if (w.server === 'p') {
         ctx.fillStyle = 'rgba(160,215,255,' + (0.55 + 0.35 * Math.sin(world.time * 5)).toFixed(2) + ')';
         ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
@@ -1972,6 +2102,9 @@
     showHints = diff !== 'hell';
     input.left = input.right = input.jump = input.swing = input.drop = input.high = false;
     input2.left = input2.right = input2.jump = input2.swing = input2.drop = input2.high = false;
+    /* 双人模式：触屏层切成"左右各一套"的布局 */
+    var tl = document.getElementById('touch');
+    if (tl) tl.classList.toggle('twoP', mode === '2p');
     document.getElementById('menu').classList.add('hide');
     document.getElementById('over').classList.add('hide');
     document.getElementById('pause').classList.add('hide');
@@ -2033,6 +2166,20 @@
     document.getElementById('menu').classList.remove('hide');
   });
   document.getElementById('btnResume').addEventListener('click', function () { togglePause(); });
+  /* 手机端系统键：暂停 / 音效 / 返回菜单 */
+  var sysPause = document.getElementById('sysPause');
+  var sysSound = document.getElementById('sysSound');
+  var sysMenu = document.getElementById('sysMenu');
+  function syncSoundIcon() { if (sysSound) sysSound.textContent = soundOn ? '🔊' : '🔇'; }
+  if (sysPause) sysPause.addEventListener('click', function () { if (state === 'playing' || state === 'paused') togglePause(); });
+  if (sysSound) sysSound.addEventListener('click', function () { soundOn = !soundOn; syncSoundIcon(); audio(); });
+  if (sysMenu) sysMenu.addEventListener('click', function () {
+    state = 'menu';
+    document.getElementById('pause').classList.add('hide');
+    document.getElementById('over').classList.add('hide');
+    document.getElementById('menu').classList.remove('hide');
+  });
+  syncSoundIcon();
   document.getElementById('btnQuit').addEventListener('click', function () {
     state = 'menu';
     document.getElementById('pause').classList.add('hide');
@@ -2128,8 +2275,10 @@
   // 触屏按钮
   document.querySelectorAll('.tbtn').forEach(function (b) {
     var key = b.dataset.k;
-    var press = function (ev) { ev.preventDefault(); input[key] = true; b.classList.add('on'); };
-    var release = function (ev) { if (ev) ev.preventDefault(); input[key] = false; b.classList.remove('on'); };
+    /* data-side=2 的按钮（双人模式右侧玩家）写进 input2 */
+    var target = function () { return b.dataset.side === '2' ? input2 : input; };
+    var press = function (ev) { ev.preventDefault(); target()[key] = true; b.classList.add('on'); };
+    var release = function (ev) { if (ev) ev.preventDefault(); target()[key] = false; b.classList.remove('on'); };
     b.addEventListener('pointerdown', press);
     b.addEventListener('pointerup', release);
     b.addEventListener('pointercancel', release);
@@ -2145,6 +2294,7 @@
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
     document.getElementById('touch').classList.remove('hide');
   }
+
 })();
 
 </script>
