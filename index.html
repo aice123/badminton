@@ -890,7 +890,9 @@
     }
     p.x = clamp(p.x, minX, maxX);
 
-    if (it.jump && p.onGround) { p.vy = K.JUMP_V; p.onGround = false; }
+    /* 发球方在发球状态下不能起跳（双脚必须在地） */
+    var _mayJump = !(w.state === 'serve' && w.server === p.side);
+    if (it.jump && p.onGround && _mayJump) { p.vy = K.JUMP_V; p.onGround = false; }
     if (!p.onGround) {
       p.vy -= K.PG * dt;
       p.y += p.vy * dt;
