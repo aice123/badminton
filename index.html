@@ -113,7 +113,12 @@
   .tbtn[data-k="swing"] { right: 1.5vmin; width: 14vmin; height: 14vmin; max-width: 106px; max-height: 106px; font-size: 3.4vmin; }
   /* ---------- 双人模式的触屏布局：左右各一套、镜像排布 ---------- */
   .p2btn { display: none; }
-  #touch.twoP .p2btn { display: flex; }
+  /* 只显示玩家2 的动作键；移动/跳已并入摇杆，别再被这条规则"复活" */
+  #touch.twoP .p2btn[data-k="high"],
+  #touch.twoP .p2btn[data-k="swing"],
+  #touch.twoP .p2btn[data-k="drop"] { display: flex; }
+  /* 观战模式：所有操作键（含摇杆）都不显示，只保留右上角系统键 */
+  #touch.spectate .tbtn, #touch.spectate .stick { display: none; }
   #touch.twoP .tbtn { width: 10.5vmin; height: 10.5vmin; min-width: 38px; min-height: 38px; font-size: 3.2vmin; transform: none; }
   #touch.twoP .tbtn[data-k="swing"] { width: 12vmin; height: 12vmin; min-width: 44px; min-height: 44px; font-size: 2.9vmin; }
   /* 玩家1（左侧） */
@@ -2114,6 +2119,7 @@
     /* 双人模式：触屏层切成"左右各一套"的布局 */
     var tl = document.getElementById('touch');
     if (tl) tl.classList.toggle('twoP', mode === '2p');
+    if (tl) tl.classList.toggle('spectate', mode === 'ai');
     document.getElementById('menu').classList.add('hide');
     document.getElementById('over').classList.add('hide');
     document.getElementById('pause').classList.add('hide');
