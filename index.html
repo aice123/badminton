@@ -1082,8 +1082,10 @@
         w.winner = winner;
       } else {
         w.pointT = K.GAME_BREAK;
-        w.msg = '第 ' + w.gameNo + ' 局 ' + (winner === 'p' ? '你拿下' : '电脑拿下') +
-          '（' + a + ':' + b + '）';
+        var _win = winner === 'p'
+          ? (w.mode === '2p' ? '玩家1' : (w.mode === 'ai' ? '电脑A' : '你'))
+          : (w.mode === '2p' ? '玩家2' : (w.mode === 'ai' ? '电脑B' : '电脑'));
+        w.msg = '第 ' + w.gameNo + ' 局 ' + _win + '拿下' + '（' + a + ':' + b + '）';
         w.msgT = K.GAME_BREAK;
       }
       w.events.push({ type: 'gameover', winner: winner, p: a, a: b, gameNo: w.gameNo });
@@ -1989,7 +1991,9 @@
     ctx.fillStyle = 'rgba(190,210,240,0.7)';
     ctx.fillText('本回合 ' + w.rallyHits + ' 拍', 20, 28);
     ctx.fillText('最长回合 ' + w.longestRally + ' 拍', 20, 48);
-    ctx.fillText('你击球 ' + w.p.hits + ' 次 / 电脑 ' + w.a.hits + ' 次', 20, 68);
+    var _lbL = twoP ? '玩家1' : (w.mode === 'ai' ? '电脑A' : '你');
+    var _lbR = twoP ? '玩家2' : (w.mode === 'ai' ? '电脑B' : '电脑');
+    ctx.fillText(_lbL + '击球 ' + w.p.hits + ' 次 / ' + _lbR + ' ' + w.a.hits + ' 次', 20, 68);
     /* 这两行用同一套排版：标签 + "你 X" + 空格 + "电脑 Y"，两边的数值间距一致 */
     var aiMode = w.mode === 'ai';
     var lb1 = aiMode ? '电脑A' : (twoP ? '玩家1' : '你');
@@ -2037,37 +2041,37 @@
       /* 局点 / 赛点提示（发球前显示） */
       var sit = BAD.pointSituation(w);
       var tip = null, tipCol = '#ffd166';
-      if (sit.server === 'match') { tip = '★ 赛点 —— 再得 1 分就赢下整场'; tipCol = '#ff8a5c'; }
-      else if (sit.server === 'game') { tip = '◆ 局点 —— 再得 1 分就拿下本局'; tipCol = '#ffd166'; }
-      else if (sit.recv === 'match') { tip = '⚠ 对手赛点 —— 这一分丢不得'; tipCol = '#ff8a5c'; }
-      else if (sit.recv === 'game') { tip = '◇ 对手局点 —— 顶住这一分'; tipCol = '#9fd8ff'; }
+      if (sit.server === 'match') { tip = '★ 赛点 · 再得 1 分赢下整场'; tipCol = '#ff8a5c'; }
+      else if (sit.server === 'game') { tip = '◆ 局点 · 再得 1 分拿下本局'; tipCol = '#ffd166'; }
+      else if (sit.recv === 'match') { tip = '⚠ 对手赛点 · 这一分丢不得'; tipCol = '#ff8a5c'; }
+      else if (sit.recv === 'game') { tip = '◇ 对手局点 · 顶住这一分'; tipCol = '#9fd8ff'; }
       if (tip) {
         ctx.save();
         var pulse = 0.7 + 0.3 * Math.sin(world.time * 6);
-        ctx.font = 'bold 22px "Microsoft YaHei",system-ui,sans-serif';
+        ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';   // 与发球提示同号
         ctx.fillStyle = tipCol;
         ctx.globalAlpha = pulse;
-        ctx.fillText(tip, K.W / 2, 246);
+        ctx.fillText(tip, K.W / 2, 152);   // 发球前的提示整体排在横幅上方（横幅 y=226~260）
         ctx.globalAlpha = 1;
         ctx.restore();
       }
       if (w.server === 'p') {
         ctx.fillStyle = 'rgba(160,215,255,' + (0.55 + 0.35 * Math.sin(world.time * 5)).toFixed(2) + ')';
         ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
-        ctx.fillText(twoP ? '玩家1 按 空格 发球（按 S 发短球）' : '按 空格 / J 发球', K.W / 2, 300);
+        ctx.fillText(twoP ? '玩家1 按 空格 发球（按 S 发短球）' : '按 空格 / J 发球', K.W / 2, 184);
         ctx.font = '14px "Microsoft YaHei",system-ui,sans-serif';
         ctx.fillStyle = 'rgba(160,200,240,0.6)';
         ctx.fillText(twoP ? '发球必须落在前发球线与端线之间，否则判违例'
-          : '按 S 发低平短球（对手只能下手接）；发球必须落在前发球线与端线之间，否则判违例', K.W / 2, 326);
+          : '按 S 发低平短球（对手只能下手接）；发球必须落在前发球线与端线之间，否则判违例', K.W / 2, 210);
       } else {
         ctx.fillStyle = 'rgba(255,170,140,0.75)';
         ctx.font = 'bold 18px "Microsoft YaHei",system-ui,sans-serif';
         if (twoP) {
           ctx.fillStyle = 'rgba(255,170,140,' + (0.55 + 0.35 * Math.sin(world.time * 5)).toFixed(2) + ')';
           ctx.font = 'bold 20px "Microsoft YaHei",system-ui,sans-serif';
-          ctx.fillText('玩家2 按 小键盘5 发球（按 2 发短球）', K.W / 2, 300);
+          ctx.fillText('玩家2 按 小键盘0 发球（按 5 发短球）', K.W / 2, 184);
         } else {
-          ctx.fillText('电脑发球…', K.W / 2, 300);
+          ctx.fillText('电脑发球…', K.W / 2, 184);
         }
       }
     }
@@ -2204,8 +2208,9 @@
     state = 'over';
     var w = world;
     var twoP = w.mode === '2p';
-    document.getElementById('overTitle').textContent = twoP
-      ? (w.winner === 'p' ? '玩 家 1 获 胜' : '玩 家 2 获 胜')
+    document.getElementById('overTitle').textContent =
+      w.mode === 'ai' ? (w.winner === 'p' ? '电 脑 A 获 胜' : '电 脑 B 获 胜')
+      : twoP ? (w.winner === 'p' ? '玩 家 1 获 胜' : '玩 家 2 获 胜')
       : (w.winner === 'p' ? '你 赢 了 ！' : '你 输 了');
     document.getElementById('overTitle').style.color = w.winner === 'p' ? '#9ef7c0' : '#ff9d7a';
     document.getElementById('overScore').textContent = w.games.p + ' : ' + w.games.a;
@@ -2218,7 +2223,8 @@
       '　·　最长回合 <b>' + w.longestRally + '</b> 拍　·　最高连得：' +
       (twoP ? '玩家1' : '你') + ' <b>' + w.bestStreak.p + '</b> / ' +
       (twoP ? '玩家2' : '电脑') + ' <b>' + w.bestStreak.a + '</b>　·　' +
-      '你击球 <b>' + w.p.hits + '</b> 次　·　电脑击球 <b>' + w.a.hits + '</b> 次';
+      (twoP ? '玩家1' : (w.mode === 'ai' ? '电脑A' : '你')) + '击球 <b>' + w.p.hits + '</b> 次　·　' +
+      (twoP ? '玩家2' : (w.mode === 'ai' ? '电脑B' : '电脑')) + '击球 <b>' + w.a.hits + '</b> 次';
     document.getElementById('over').classList.remove('hide');
   }
 
@@ -2232,7 +2238,7 @@
       mode = b.dataset.m;
       document.getElementById('diffWrap').classList.toggle('off', mode === '2p');
       document.getElementById('diffNote').textContent = mode === '2p'
-        ? '双人同屏对战：左侧用 A/D + 空格系列键，右侧用小键盘 4/6 + 5 系列键。三局两胜，每局 15 分。'
+        ? '双人同屏对战：左侧用 A/D + 空格系列键；右侧用小键盘 4/6 移动、0 挥拍、5 吊球、Enter 高远。三局两胜，每局 15 分。'
         : notes[document.querySelector('input[name=diff]:checked').value];
     });
   });
